@@ -1,4 +1,3 @@
-// src/pages/Dashboard.jsx
 import React, { useState, useEffect } from "react";
 import { auth } from "../firebaseConfig";
 import { db } from "../firebaseConfig";
@@ -12,88 +11,88 @@ const Dashboard = ({ user }) => {
   const [dealerships, setDealerships] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // تبدیل ایمیل به کلید دیتابیس
+  const emailKey = user?.email ? user.email.replace(/\./g, '_').replace(/@/g, '_at_') : "";
+
   // دریافت خودروهای فعال
   useEffect(() => {
-    if (!user) return;
-    const carsRef = ref(db, `users/${user.uid}/cars`);
+    if (!user || !emailKey) {
+      setLoading(false);
+      return;
+    }
+    const carsRef = ref(db, `users_emails/${emailKey}/cars`);
     const unsubscribe = onValue(carsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const carsArray = Object.entries(data)
-          .filter(([_, car]) => !car.sold)
-          .map(([id, car]) => ({ id, ...car }));
+        const carsArray = Object.values(data).filter(car => !car.sold);
         setCars(carsArray);
       } else {
         setCars([]);
       }
+      setLoading(false);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   // دریافت هزینه‌های خودرو
   useEffect(() => {
-    if (!user) return;
-    const expensesRef = ref(db, `users/${user.uid}/expenses`);
+    if (!user || !emailKey) return;
+    const expensesRef = ref(db, `users_emails/${emailKey}/expenses`);
     const unsubscribe = onValue(expensesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const expensesArray = Object.entries(data).map(([id, exp]) => ({ id, ...exp }));
-        setExpenses(expensesArray);
+        setExpenses(Object.values(data));
       } else {
         setExpenses([]);
       }
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   // دریافت هزینه‌های دفتری
   useEffect(() => {
-    if (!user) return;
-    const officeExpensesRef = ref(db, `users/${user.uid}/officeExpenses`);
+    if (!user || !emailKey) return;
+    const officeExpensesRef = ref(db, `users_emails/${emailKey}/officeExpenses`);
     const unsubscribe = onValue(officeExpensesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const expensesArray = Object.values(data);
-        setOfficeExpenses(expensesArray);
+        setOfficeExpenses(Object.values(data));
       } else {
         setOfficeExpenses([]);
       }
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   // دریافت درآمدها
   useEffect(() => {
-    if (!user) return;
-    const incomesRef = ref(db, `users/${user.uid}/incomes`);
+    if (!user || !emailKey) return;
+    const incomesRef = ref(db, `users_emails/${emailKey}/incomes`);
     const unsubscribe = onValue(incomesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const incomesArray = Object.values(data);
-        setIncomes(incomesArray);
+        setIncomes(Object.values(data));
       } else {
         setIncomes([]);
       }
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   // دریافت نمایندگی‌ها
   useEffect(() => {
-    if (!user) return;
-    const dealershipsRef = ref(db, `users/${user.uid}/dealerships`);
+    if (!user || !emailKey) return;
+    const dealershipsRef = ref(db, `users_emails/${emailKey}/dealerships`);
     const unsubscribe = onValue(dealershipsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const dealershipsArray = Object.values(data);
-        setDealerships(dealershipsArray);
+        setDealerships(Object.values(data));
       } else {
         setDealerships([]);
       }
-      setLoading(false);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   const handleLogout = () => {
     auth.signOut();
@@ -154,34 +153,72 @@ const Dashboard = ({ user }) => {
   const uniqueCustomers = [...new Set(cars.map(car => car.buyerName))].length;
   const totalDealerships = dealerships.length;
 
+  // استایل باکس‌ها
   const statsContainerStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
     gap: "20px",
-    marginBottom: "24px"
+    marginBottom: "30px"
   };
 
   const statCardStyle = (bgColor) => ({
     background: bgColor,
-    padding: "20px 16px",
+    padding: "24px 20px",
     borderRadius: "20px",
     color: "#fff",
     boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    transition: "transform 0.2s",
+    transition: "transform 0.2s, box-shadow 0.2s",
     textAlign: "center",
     cursor: "pointer",
     ":hover": {
-      transform: "translateY(-4px)"
+      transform: "translateY(-5px)",
+      boxShadow: "0 8px 25px rgba(0,0,0,0.15)"
     }
   });
 
-  const statIconStyle = { fontSize: "36px", marginBottom: "10px" };
-  const statLabelStyle = { fontSize: "13px", opacity: 0.9, marginBottom: "6px", fontWeight: "500" };
-  const statValueStyle = { fontSize: "22px", fontWeight: "bold", marginBottom: "6px" };
-  const statWordsStyle = { fontSize: "10px", opacity: 0.8, marginTop: "4px" };
+  const statIconStyle = { fontSize: "40px", marginBottom: "12px" };
+  const statLabelStyle = { fontSize: "13px", opacity: 0.9, marginBottom: "8px", fontWeight: "500" };
+  const statValueStyle = { fontSize: "24px", fontWeight: "bold", marginBottom: "6px" };
+  const statWordsStyle = { fontSize: "10px", opacity: 0.8, marginTop: "6px" };
+
+  // استایل بارگذاری
+  const loadingStyle = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "60vh",
+    flexDirection: "column",
+    gap: "20px"
+  };
+
+  const loadingSpinner = {
+    width: "50px",
+    height: "50px",
+    border: "4px solid #e2e8f0",
+    borderTop: "4px solid #f59e0b",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite"
+  };
+
+  const loadingText = {
+    fontSize: "14px",
+    color: "#64748b",
+    fontWeight: "500"
+  };
 
   if (loading) {
-    return <div style={{ textAlign: "center", padding: "40px" }}>در حال بارگذاری...</div>;
+    return (
+      <div style={loadingStyle}>
+        <div style={loadingSpinner}></div>
+        <p style={loadingText}>در حال بارگذاری...</p>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
@@ -197,9 +234,8 @@ const Dashboard = ({ user }) => {
         </button>
       </div>
 
-      <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px", color: "#1e293b" }}>
-        📊 داشبورد مدیریت
-      </h2>
+      <h2 style={pageTitleStyle}>📊 داشبورد مدیریت</h2>
+      <p style={pageSubtitleStyle}>خلاصه اطلاعات و آمار کلی سیستم</p>
 
       <div style={statsContainerStyle}>
         {/* 1. مجموع خرید ماشین */}
@@ -265,9 +301,9 @@ const headerStyle = {
   justifyContent: "space-between",
   alignItems: "center",
   marginBottom: "24px",
-  padding: "12px 20px",
+  padding: "16px 24px",
   backgroundColor: "#fff",
-  borderRadius: "16px",
+  borderRadius: "20px",
   boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
 };
 
@@ -280,22 +316,15 @@ const userInfoStyle = {
   borderRadius: "12px"
 };
 
-const userIconStyle = {
-  fontSize: "18px"
-};
-
-const userNameStyle = {
-  fontSize: "14px",
-  fontWeight: "500",
-  color: "#1e293b"
-};
+const userIconStyle = { fontSize: "18px" };
+const userNameStyle = { fontSize: "14px", fontWeight: "500", color: "#1e293b" };
 
 const logoutBtnStyle = {
   background: "#ef4444",
   color: "#fff",
   border: "none",
-  padding: "8px 20px",
-  borderRadius: "10px",
+  padding: "8px 24px",
+  borderRadius: "12px",
   cursor: "pointer",
   fontSize: "14px",
   fontWeight: "bold",
@@ -303,9 +332,20 @@ const logoutBtnStyle = {
   alignItems: "center",
   gap: "8px",
   transition: "all 0.2s",
-  ":hover": {
-    backgroundColor: "#dc2626"
-  }
+  ":hover": { backgroundColor: "#dc2626", transform: "scale(1.02)" }
+};
+
+const pageTitleStyle = {
+  fontSize: "24px",
+  fontWeight: "bold",
+  color: "#1e293b",
+  margin: "0 0 8px 0"
+};
+
+const pageSubtitleStyle = {
+  fontSize: "14px",
+  color: "#64748b",
+  margin: "0 0 24px 0"
 };
 
 export default Dashboard;

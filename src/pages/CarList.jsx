@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebaseConfig";
-import { ref, onValue, remove, push, set, update } from "firebase/database";
+import { ref, onValue, remove, push, set, update, get } from "firebase/database";
 import Modal from "../Modal";
 import SellCarModal from "./SellCarModal";
 import CarForm from "./CarForm";
 
-const CarList = ({ user, onBack }) => {
+const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,11 +15,6 @@ const CarList = ({ user, onBack }) => {
   
   const [openConfirmModal, setOpenConfirmModal] = useState(false);
   const [carToDelete, setCarToDelete] = useState(null);
-  
-  // مودال تأیید حذف هزینه
-  const [openConfirmExpenseModal, setOpenConfirmExpenseModal] = useState(false);
-  const [expenseToDelete, setExpenseToDelete] = useState(null);
-  
   const [openExpenseModal, setOpenExpenseModal] = useState(false);
   const [selectedCar, setSelectedCar] = useState(null);
   const [expenseCategory, setExpenseCategory] = useState("");
@@ -27,18 +22,23 @@ const CarList = ({ user, onBack }) => {
   const [expenseDescription, setExpenseDescription] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   
-  const [openEditExpenseModal, setOpenEditExpenseModal] = useState(false);
-  const [editingExpense, setEditingExpense] = useState(null);
-  const [editExpenseCategory, setEditExpenseCategory] = useState("");
-  const [editExpenseAmount, setEditExpenseAmount] = useState("");
-  const [editExpenseDescription, setEditExpenseDescription] = useState("");
-  
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [selectedCarForSale, setSelectedCarForSale] = useState(null);
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCar, setEditingCar] = useState(null);
+  
+  const [openEditExpenseModal, setOpenEditExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editExpenseCategory, setEditExpenseCategory] = useState("");
+  const [editExpenseAmount, setEditExpenseAmount] = useState("");
+  const [editExpenseDescription, setEditExpenseDescription] = useState("");
+  
+  const [openConfirmExpenseModal, setOpenConfirmExpenseModal] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
+
+  const emailKey = user?.email?.replace(/\./g, '_').replace(/@/g, '_at_') || "";
 
   const expenseCategories = [
     { value: "mechanic", label: "مکانیکی", icon: "🔧" },
@@ -46,9 +46,9 @@ const CarList = ({ user, onBack }) => {
     { value: "battery", label: "باطری‌سازی", icon: "🔋" },
     { value: "bodywork", label: "صافکاری", icon: "🔨" },
     { value: "painting", label: "نقاشی", icon: "🎨" },
-    { value: "electrical", label: "رودی", icon: "⚡" },
+    { value: "electrical", label: "رودی (برق)", icon: "⚡" },
     { value: "parts", label: "هزینه وسایل", icon: "🔧" },
-    { value: "other", label: "سایر", icon: "📦" },
+    { value: "other", label: "سایر هزینه‌ها", icon: "📦" },
   ];
 
   const showToast = (message, type) => {
@@ -57,18 +57,17 @@ const CarList = ({ user, onBack }) => {
   };
 
   useEffect(() => {
-    if (!user) return;
-    const carsRef = ref(db, `users/${user.uid}/cars`);
+    if (!user || !emailKey) {
+      setLoading(false);
+      return;
+    }
+    const carsRef = ref(db, `users_emails/${emailKey}/cars`);
     const unsubscribe = onValue(carsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const carsArray = Object.entries(data)
-          .filter(([_, value]) => !value.sold)
-          .map(([id, value]) => ({
-            id: id,
-            ...value,
-            expenses: []
-          })).reverse();
+          .filter(([_, car]) => !car.sold)
+          .map(([id, car]) => ({ id, ...car }));
         setCars(carsArray);
       } else {
         setCars([]);
@@ -76,19 +75,21 @@ const CarList = ({ user, onBack }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   useEffect(() => {
-    if (!user) return;
-    const expensesRef = ref(db, `users/${user.uid}/expenses`);
+    if (!user || !emailKey) return;
+    const expensesRef = ref(db, `users_emails/${emailKey}/expenses`);
     const unsubscribe = onValue(expensesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         setExpenses(data);
+      } else {
+        setExpenses({});
       }
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   const handleDeleteClick = (car) => {
     setCarToDelete(car);
@@ -98,8 +99,9 @@ const CarList = ({ user, onBack }) => {
   const confirmDelete = async () => {
     if (!carToDelete) return;
     try {
-      await remove(ref(db, `users/${user.uid}/cars/${carToDelete.id}`));
+      await remove(ref(db, `users_emails/${emailKey}/cars/${carToDelete.id}`));
       showToast(`✅ خودرو "${carToDelete.carName}" با موفقیت حذف شد`, "success");
+      setCars(prev => prev.filter(c => c.id !== carToDelete.id));
     } catch (error) {
       showToast("❌ خطا در حذف خودرو", "error");
     } finally {
@@ -108,7 +110,11 @@ const CarList = ({ user, onBack }) => {
     }
   };
 
-  // حذف هزینه با مودال
+  const handleEditCar = (car) => {
+    setEditingCar(car);
+    setShowEditModal(true);
+  };
+
   const handleDeleteExpenseClick = (expense) => {
     setExpenseToDelete(expense);
     setOpenConfirmExpenseModal(true);
@@ -117,19 +123,21 @@ const CarList = ({ user, onBack }) => {
   const confirmDeleteExpense = async () => {
     if (!expenseToDelete) return;
     try {
-      await remove(ref(db, `users/${user.uid}/expenses/${expenseToDelete.id}`));
+      await remove(ref(db, `users_emails/${emailKey}/expenses/${expenseToDelete.id}`));
       showToast(`✅ هزینه "${expenseToDelete.categoryLabel}" با موفقیت حذف شد`, "success");
+      const expensesRef = ref(db, `users_emails/${emailKey}/expenses`);
+      const snapshot = await get(expensesRef);
+      if (snapshot.exists()) {
+        setExpenses(snapshot.val());
+      } else {
+        setExpenses({});
+      }
     } catch (error) {
       showToast("❌ خطا در حذف هزینه", "error");
     } finally {
       setOpenConfirmExpenseModal(false);
       setExpenseToDelete(null);
     }
-  };
-
-  const handleEditCar = (car) => {
-    setEditingCar(car);
-    setShowEditModal(true);
   };
 
   const handleEditExpense = (expense) => {
@@ -151,7 +159,7 @@ const CarList = ({ user, onBack }) => {
     }
 
     try {
-      const expenseRef = ref(db, `users/${user.uid}/expenses/${editingExpense.id}`);
+      const expenseRef = ref(db, `users_emails/${emailKey}/expenses/${editingExpense.id}`);
       await update(expenseRef, {
         category: editExpenseCategory,
         categoryLabel: expenseCategories.find(c => c.value === editExpenseCategory)?.label,
@@ -160,13 +168,16 @@ const CarList = ({ user, onBack }) => {
         description: editExpenseDescription || "",
         updatedAt: new Date().toISOString()
       });
-
       showToast(`✅ هزینه با موفقیت ویرایش شد`, "success");
       setOpenEditExpenseModal(false);
       setEditingExpense(null);
-      setEditExpenseCategory("");
-      setEditExpenseAmount("");
-      setEditExpenseDescription("");
+      const expensesRef = ref(db, `users_emails/${emailKey}/expenses`);
+      const snapshot = await get(expensesRef);
+      if (snapshot.exists()) {
+        setExpenses(snapshot.val());
+      } else {
+        setExpenses({});
+      }
     } catch (error) {
       showToast("❌ خطا در ویرایش هزینه", "error");
     }
@@ -177,14 +188,6 @@ const CarList = ({ user, onBack }) => {
     rawValue = rawValue.replace(/\./g, "");
     if (rawValue === "" || /^\d+$/.test(rawValue)) {
       setExpenseAmount(rawValue);
-    }
-  };
-
-  const handleEditExpenseAmountChange = (e) => {
-    let rawValue = e.target.value.replace(/,/g, "");
-    rawValue = rawValue.replace(/\./g, "");
-    if (rawValue === "" || /^\d+$/.test(rawValue)) {
-      setEditExpenseAmount(rawValue);
     }
   };
 
@@ -213,7 +216,7 @@ const CarList = ({ user, onBack }) => {
         createdAt: new Date().toISOString(),
       };
 
-      const expensesRef = ref(db, `users/${user.uid}/expenses/${expenseData.id}`);
+      const expensesRef = ref(db, `users_emails/${emailKey}/expenses/${expenseData.id}`);
       await set(expensesRef, expenseData);
 
       showToast(`✅ هزینه ${expenseCategories.find(c => c.value === expenseCategory)?.label} با موفقیت ثبت شد`, "success");
@@ -222,6 +225,12 @@ const CarList = ({ user, onBack }) => {
       setExpenseCategory("");
       setExpenseAmount("");
       setExpenseDescription("");
+      
+      const allExpensesRef = ref(db, `users_emails/${emailKey}/expenses`);
+      const snapshot = await get(allExpensesRef);
+      if (snapshot.exists()) {
+        setExpenses(snapshot.val());
+      }
       
     } catch (error) {
       console.error("خطا:", error);
@@ -277,7 +286,7 @@ const CarList = ({ user, onBack }) => {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit'
-        }).format(date);
+        }).format(dateValue);
       }
       return "-";
     } catch (error) {
@@ -287,7 +296,6 @@ const CarList = ({ user, onBack }) => {
 
   const numberToWords = (num) => {
     if (!num || num === 0) return "صفر";
-    
     const ones = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"];
     const tens = ["", "", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود"];
     const hundreds = ["", "یکصد", "دویست", "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد"];
@@ -306,7 +314,7 @@ const CarList = ({ user, onBack }) => {
       return hundreds[Math.floor(n / 100)] + (n % 100 !== 0 ? " و " + convertChunk(n % 100) : "");
     };
     
-    const numStr = num.toString();
+    const numStr = Math.abs(num).toString();
     let chunks = [];
     for (let i = numStr.length; i > 0; i -= 3) {
       chunks.unshift(parseInt(numStr.substring(Math.max(0, i - 3), i), 10));
@@ -363,18 +371,20 @@ const CarList = ({ user, onBack }) => {
     switch(type) {
       case 'buyer':
         return { backgroundColor: "#e0f2fe", borderRadius: "12px", padding: "6px 10px", textAlign: "left", fontWeight: "bold", color: "#0284c7", fontSize: "12px" };
-      case 'datePurchase':
-        return { backgroundColor: "#dcfce7", borderRadius: "12px", padding: "6px 10px", textAlign: "left", color: "#16a34a", fontWeight: "500", fontSize: "12px" };
-      case 'dateInsurance':
-        return { backgroundColor: "#fef3c7", borderRadius: "12px", padding: "6px 10px", textAlign: "left", color: "#d97706", fontWeight: "500", fontSize: "12px" };
-      case 'dateAttorney':
-        return { backgroundColor: "#e0e7ff", borderRadius: "12px", padding: "6px 10px", textAlign: "left", color: "#4338ca", fontWeight: "500", fontSize: "12px" };
-      case 'dateInspection':
-        return { backgroundColor: "#fce7f3", borderRadius: "12px", padding: "6px 10px", textAlign: "left", color: "#db2777", fontWeight: "500", fontSize: "12px" };
+      case 'date':
+        return { backgroundColor: "#dbeafe", borderRadius: "12px", padding: "6px 10px", textAlign: "left", color: "#1e40af", fontWeight: "500", fontSize: "12px" };
       case 'purchase':
         return { backgroundColor: "#f1f5f9", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
+      case 'selling':
+        return { backgroundColor: "#dcfce7", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
+      case 'profit':
+        return { backgroundColor: "#fef3c7", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
+      case 'loss':
+        return { backgroundColor: "#fee2e2", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
       case 'expense':
         return { backgroundColor: "#fef3c7", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
+      case 'total':
+        return { backgroundColor: "#ede9fe", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
       default:
         return { backgroundColor: "#f8fafc", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
     }
@@ -394,14 +404,14 @@ const CarList = ({ user, onBack }) => {
     textAlign: "center"
   };
 
-  const columnTitleStyle = {
+  const columnTitleStyle = (isProfit = true) => ({
     fontSize: "11px",
     fontWeight: "bold",
     color: "#64748b",
     marginBottom: "6px",
     paddingBottom: "4px",
-    borderBottom: "2px solid #f59e0b"
-  };
+    borderBottom: `2px solid ${isProfit ? "#f59e0b" : "#ef4444"}`
+  });
 
   const wordsStyle = { fontSize: "9px", color: "#64748b", marginTop: "3px", textAlign: "left" };
   const tinyWordsStyle = { fontSize: "8px", color: "#94a3b8", marginTop: "2px", textAlign: "left" };
@@ -432,6 +442,13 @@ const CarList = ({ user, onBack }) => {
     gap: "6px" 
   };
 
+  const dateSectionStyle = {
+    marginBottom: "12px",
+    padding: "10px",
+    background: "#f8fafc",
+    borderRadius: "12px"
+  };
+
   const expenseSectionStyle = { 
     marginBottom: "12px", 
     padding: "10px", 
@@ -443,49 +460,6 @@ const CarList = ({ user, onBack }) => {
     display: "flex", 
     flexDirection: "column", 
     gap: "8px" 
-  };
-
-  const expenseItemStyle = { 
-    background: "#fff", 
-    padding: "8px", 
-    borderRadius: "8px", 
-    marginBottom: "6px", 
-    border: "1px solid #e2e8f0" 
-  };
-
-  const expenseItemHeader = { 
-    display: "flex", 
-    justifyContent: "space-between", 
-    alignItems: "center", 
-    marginBottom: "4px",
-    fontSize: "11px"
-  };
-
-  const expenseActionsStyle = {
-    display: "flex",
-    gap: "6px",
-    marginTop: "6px",
-    justifyContent: "flex-end"
-  };
-
-  const expenseEditBtnStyle = {
-    background: "#8b5cf6",
-    color: "#fff",
-    border: "none",
-    padding: "4px 8px",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontSize: "10px"
-  };
-
-  const expenseDeleteBtnStyle = {
-    background: "#ef4444",
-    color: "#fff",
-    border: "none",
-    padding: "4px 8px",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontSize: "10px"
   };
 
   const moreExpenseStyle = { 
@@ -504,6 +478,33 @@ const CarList = ({ user, onBack }) => {
     flexWrap: "wrap"
   };
 
+  const expenseActionsStyle = {
+    display: "flex",
+    gap: "8px",
+    marginTop: "8px",
+    justifyContent: "flex-end"
+  };
+
+  const expenseEditBtnStyle = {
+    padding: "4px 10px",
+    backgroundColor: "#8b5cf6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "11px"
+  };
+
+  const expenseDeleteBtnStyle = {
+    padding: "4px 10px",
+    backgroundColor: "#ef4444",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "11px"
+  };
+
   const getHeaderColor = (carName) => {
     const colors = [
       { bg: "#eef2ff", text: "#4338ca" },
@@ -517,66 +518,109 @@ const CarList = ({ user, onBack }) => {
     return colors[index];
   };
 
+  // استایل بارگذاری
+  const loadingStyle = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "60vh",
+    flexDirection: "column",
+    gap: "16px"
+  };
+
+  const loadingSpinner = {
+    width: "50px",
+    height: "50px",
+    border: "4px solid #e2e8f0",
+    borderTop: "4px solid #f59e0b",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite"
+  };
+
+  const loadingText = {
+    fontSize: "14px",
+    color: "#64748b",
+    fontWeight: "500"
+  };
+
   if (loading) {
-    return <div style={loadingStyle}>در حال بارگذاری...</div>;
+    return (
+      <div style={loadingStyle}>
+        <div style={loadingSpinner}></div>
+        <p style={loadingText}>در حال بارگذاری...</p>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
     <div>
       {toast && (
         <div style={{
-          ...toastStyle,
+          position: "fixed",
+          top: "20px",
+          right: "20px",
+          padding: "12px 20px",
+          borderRadius: "12px",
+          color: "#fff",
+          fontSize: "14px",
+          fontWeight: "500",
+          zIndex: 10000,
           backgroundColor: toast.type === "success" ? "#10b981" : "#ef4444",
           animation: "slideIn 0.3s ease-out"
         }}>
-          <span>{toast.type === "success" ? "✅" : "❌"}</span>
           {toast.message}
         </div>
       )}
 
-      <div style={headerButtonsStyle}>
-        <button onClick={onBack} style={backBtnStyle}>← بازگشت</button>
-        <button onClick={() => setShowAddModal(true)} style={addNewBtnStyle}>➕ ثبت خودرو جدید</button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", gap: "10px", flexWrap: "wrap" }}>
+        <button onClick={onBack} style={{ background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px" }}>← بازگشت</button>
+        <button onClick={() => setShowAddModal(true)} style={{ background: "#16a34a", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" }}>➕ ثبت خودرو جدید</button>
       </div>
 
-      <div style={statsContainerStyle}>
-        <div style={statCardStyle}>
-          <div style={statIconStyle}>🚗</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", marginBottom: "24px", maxWidth: "700px", margin: "0 auto 24px auto" }}>
+        <div style={{ background: "linear-gradient(135deg, #64748b, #475569)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
+          <div style={{ fontSize: "32px" }}>🚗</div>
           <div>
-            <div style={statValueStyle}>{totalCarCount}</div>
-            <div style={statLabelStyle}>تعداد خودروها</div>
+            <div style={{ fontSize: "24px", fontWeight: "bold" }}>{totalCarCount}</div>
+            <div style={{ fontSize: "12px", opacity: 0.9 }}>تعداد خودروها</div>
           </div>
         </div>
-        <div style={statCardStyle2}>
-          <div style={statIconStyle}>💰</div>
+        <div style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
+          <div style={{ fontSize: "32px" }}>💰</div>
           <div>
-            <div style={statValueStyle}>{totalCarsExpenses.toLocaleString()}</div>
-            <div style={statLabelStyle}>مجموع هزینه‌ها (تومان)</div>
-            <div style={statWordsSmall}>{numberToWords(totalCarsExpenses)} تومان</div>
+            <div style={{ fontSize: "24px", fontWeight: "bold" }}>{totalCarsExpenses.toLocaleString()}</div>
+            <div style={{ fontSize: "12px", opacity: 0.9 }}>مجموع هزینه‌ها (تومان)</div>
+            <div style={{ fontSize: "10px", opacity: 0.8, marginTop: "5px" }}>{numberToWords(totalCarsExpenses)} تومان</div>
           </div>
         </div>
       </div>
 
-      <div style={{ marginBottom: "24px", maxWidth: "700px", margin: "0 auto 24px auto" }}>
-        <label style={{...labelStyle, maxWidth: "700px", margin: "0 auto 6px auto" }}>🔍 جستجو</label>
+      <div style={{ marginBottom: "24px" }}>
+        <label style={labelStyle}>🔍 جستجو</label>
         <input
           type="text"
           placeholder="جستجو در نام خودرو یا خریدار..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{...inputStyle(999, focusedIndex), maxWidth: "700px", margin: "0 auto", display: "block"}}
+          style={inputStyle(999, focusedIndex)}
           onFocus={() => setFocusedIndex(999)}
           onBlur={() => setFocusedIndex(null)}
         />
       </div>
 
       {filteredCars.length === 0 ? (
-        <div style={emptyStyle}>
+        <div style={{ textAlign: "center", padding: "60px", background: "#fff", borderRadius: "12px" }}>
           <p>🚗 هیچ خودرویی ثبت نشده است</p>
-          <button onClick={() => setShowAddModal(true)} style={emptyAddBtnStyle}>➕ ثبت خودرو جدید</button>
+          <button onClick={() => setShowAddModal(true)} style={{ background: "#16a34a", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", marginTop: "20px" }}>➕ ثبت خودرو جدید</button>
         </div>
       ) : (
-        <div style={carsGridStyle}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", alignItems: "center" }}>
           {filteredCars.map((car) => {
             const carExpenses = expenses ? Object.entries(expenses).filter(([_, exp]) => exp.carId === car.id).map(([id, val]) => ({ id, ...val })) : [];
             const totalExpense = carExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
@@ -584,20 +628,26 @@ const CarList = ({ user, onBack }) => {
             const headerColor = getHeaderColor(car.carName);
             
             return (
-              <div key={car.id} style={carCardStyle}>
-                <div style={{...carHeaderStyle, backgroundColor: headerColor.bg}}>
-                  <div style={carTitleStyle}>
-                    <span style={carIconStyle}>🚗</span>
-                    <h3 style={{...carNameStyle, color: headerColor.text}}>{car.carName}</h3>
-                  </div>
+              <div key={car.id} style={{ background: "#fff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", transition: "all 0.3s", maxWidth: "700px", width: "100%" }}>
+                <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: headerColor.bg }}>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "bold", color: headerColor.text }}>🚗 {car.carName}</h3>
+                  <span style={{ background: "#f59e0b", padding: "4px 10px", borderRadius: "20px", fontSize: "11px", color: "#fff", fontWeight: "bold" }}>فعال</span>
                 </div>
 
-                <div style={cardContentStyle}>
+                <div style={{ padding: "16px" }}>
                   <div style={infoSectionStyle}>
                     <h4 style={sectionTitleStyle}>📋 اطلاعات خریدار</h4>
                     <div style={infoRowStyle}>
                       <span>نام خریدار:</span>
                       <div style={rightBoxStyle('buyer')}>{car.buyerName}</div>
+                    </div>
+                    <div style={infoRowStyle}>
+                      <span>تاریخ خرید:</span>
+                      <div style={rightBoxStyle('date')}>{safeConvertToPersianDate(car.purchaseDate)}</div>
+                    </div>
+                    <div style={infoRowStyle}>
+                      <span>شماره تماس:</span>
+                      <div style={rightBoxStyle('buyer')}>{car.phoneNumber || "-"}</div>
                     </div>
                     {car.description && (
                       <div style={infoRowStyle}>
@@ -607,23 +657,23 @@ const CarList = ({ user, onBack }) => {
                     )}
                   </div>
 
-                  <div style={infoSectionStyle}>
+                  <div style={dateSectionStyle}>
                     <h4 style={sectionTitleStyle}>📅 تاریخ‌های مهم</h4>
                     <div style={infoRowStyle}>
                       <span>📅 تاریخ خرید :</span>
-                      <div style={rightBoxStyle('datePurchase')}>{safeConvertToPersianDate(car.purchaseDate)}</div>
+                      <div style={rightBoxStyle('date')}>{safeConvertToPersianDate(car.purchaseDate)}</div>
                     </div>
                     <div style={infoRowStyle}>
                       <span>🛡️ بیمه :</span>
-                      <div style={rightBoxStyle('dateInsurance')}>{safeConvertToPersianDate(car.insuranceExpiry)}</div>
+                      <div style={rightBoxStyle('date')}>{safeConvertToPersianDate(car.insuranceExpiry)}</div>
                     </div>
                     <div style={infoRowStyle}>
                       <span>📜 وکالت :</span>
-                      <div style={rightBoxStyle('dateAttorney')}>{safeConvertToPersianDate(car.attorneyExpiry)}</div>
+                      <div style={rightBoxStyle('date')}>{safeConvertToPersianDate(car.attorneyExpiry)}</div>
                     </div>
                     <div style={infoRowStyle}>
                       <span>🔧 معاینه فنی :</span>
-                      <div style={rightBoxStyle('dateInspection')}>{safeConvertToPersianDate(car.technicalInspectionDate)}</div>
+                      <div style={rightBoxStyle('date')}>{safeConvertToPersianDate(car.technicalInspectionDate)}</div>
                     </div>
                   </div>
 
@@ -631,24 +681,30 @@ const CarList = ({ user, onBack }) => {
                     <div style={expenseSectionStyle}>
                       <h4 style={sectionTitleStyle}>🔧 هزینه‌های ثبت شده</h4>
                       <div style={expenseListStyle}>
-                        {carExpenses.slice(0, 3).map((exp) => (
-                          <div key={exp.id} style={expenseItemStyle}>
-                            <div style={expenseItemHeader}>
-                              <span>{exp.categoryIcon} {exp.categoryLabel}</span>
-                              <span style={expenseAmountStyle}>{formatPrice(exp.amount)} تومان</span>
+                        {carExpenses.slice(0, 3).map((exp) => {
+                          const categories = {
+                            mechanic: "مکانیکی", oilChange: "تعویض روغن", battery: "باطری‌سازی",
+                            bodywork: "صافکاری", painting: "نقاشی", electrical: "رودی (برق)",
+                            parts: "هزینه وسایل", other: "سایر"
+                          };
+                          const catName = categories[exp.category] || "سایر";
+                          const catIcon = exp.category === 'mechanic' ? '🔧' : exp.category === 'oilChange' ? '🛢️' : exp.category === 'battery' ? '🔋' : exp.category === 'bodywork' ? '🔨' : exp.category === 'painting' ? '🎨' : exp.category === 'electrical' ? '⚡' : exp.category === 'parts' ? '🔧' : '📦';
+                          
+                          return (
+                            <div key={exp.id} style={{ background: "#fff", padding: "8px", borderRadius: "8px", marginBottom: "6px", border: "1px solid #e2e8f0" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "11px", fontWeight: "bold" }}>
+                                <span>{catIcon} {catName}</span>
+                                <span style={{ fontSize: "12px", fontWeight: "bold", color: "#ef4444" }}>{formatPrice(exp.amount)} تومان</span>
+                              </div>
+                              {exp.description && <div style={{ fontSize: "10px", color: "#64748b", marginTop: "4px" }}>{exp.description}</div>}
+                              <div style={tinyWordsStyle}>{numberToWords(exp.amount)} تومان</div>
+                              <div style={expenseActionsStyle}>
+                                <button onClick={() => handleEditExpense(exp)} style={expenseEditBtnStyle}>✏️ ویرایش</button>
+                                <button onClick={() => handleDeleteExpenseClick(exp)} style={expenseDeleteBtnStyle}>🗑️ حذف</button>
+                              </div>
                             </div>
-                            {exp.description && <div style={expenseDescStyle}>{exp.description}</div>}
-                            <div style={tinyWordsStyle}>{numberToWords(exp.amount)} تومان</div>
-                            <div style={expenseActionsStyle}>
-                              <button onClick={() => handleEditExpense(exp)} style={expenseEditBtnStyle}>
-                                ✏️ ویرایش
-                              </button>
-                              <button onClick={() => handleDeleteExpenseClick(exp)} style={expenseDeleteBtnStyle}>
-                                🗑️ حذف
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {carExpenses.length > 3 && (
                           <div style={moreExpenseStyle}>+ {carExpenses.length - 3} هزینه دیگر</div>
                         )}
@@ -658,7 +714,7 @@ const CarList = ({ user, onBack }) => {
 
                   <div style={threeColumnsStyle}>
                     <div style={columnCardStyle}>
-                      <div style={columnTitleStyle}>💰 مبلغ خرید</div>
+                      <div style={columnTitleStyle(true)}>💰 مبلغ خرید</div>
                       <div style={rightBoxStyle('purchase')}>
                         <div style={{ fontWeight: "bold", fontSize: "14px" }}>{formatPrice(car.price)} تومان</div>
                         <div style={wordsStyle}>{numberToWords(car.price)} تومان</div>
@@ -666,7 +722,7 @@ const CarList = ({ user, onBack }) => {
                     </div>
                     
                     <div style={columnCardStyle}>
-                      <div style={columnTitleStyle}>🔧 مجموع هزینه‌ها</div>
+                      <div style={columnTitleStyle(true)}>🔧 مجموع هزینه‌ها</div>
                       <div style={rightBoxStyle('expense')}>
                         <div style={{ fontWeight: "bold", color: "#f59e0b", fontSize: "14px" }}>{formatPrice(totalExpense)} تومان</div>
                         <div style={wordsStyle}>{numberToWords(totalExpense)} تومان</div>
@@ -674,8 +730,8 @@ const CarList = ({ user, onBack }) => {
                     </div>
                     
                     <div style={columnCardStyle}>
-                      <div style={columnTitleStyle}>💰 جمع کل (خرید + هزینه)</div>
-                      <div style={rightBoxStyle('purchase')}>
+                      <div style={columnTitleStyle(true)}>💰 جمع کل (خرید + هزینه)</div>
+                      <div style={rightBoxStyle('total')}>
                         <div style={{ fontWeight: "bold", color: "#7c3aed", fontSize: "14px" }}>{formatPrice(totalWithCar)} تومان</div>
                         <div style={wordsStyle}>{numberToWords(totalWithCar)} تومان</div>
                       </div>
@@ -686,19 +742,19 @@ const CarList = ({ user, onBack }) => {
                     <button onClick={() => {
                       setSelectedCarForSale(car);
                       setSellModalOpen(true);
-                    }} style={sellBtnStyle}>
+                    }} style={{ flex: 1, padding: "8px", background: "#f59e0b", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" }}>
                       💰 فروش رفت
                     </button>
                     <button onClick={() => {
                       setSelectedCar(car);
                       setOpenExpenseModal(true);
-                    }} style={addExpenseBtnStyle}>
+                    }} style={{ flex: 1, padding: "8px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" }}>
                       ➕ ثبت هزینه
                     </button>
-                    <button onClick={() => handleEditCar(car)} style={editBtnStyle}>
+                    <button onClick={() => handleEditCar(car)} style={{ flex: 1, padding: "8px", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" }}>
                       ✏️ ویرایش
                     </button>
-                    <button onClick={() => handleDeleteClick(car)} style={deleteBtnStyle}>
+                    <button onClick={() => handleDeleteClick(car)} style={{ flex: 1, padding: "8px", background: "#ef4444", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" }}>
                       🗑️ حذف
                     </button>
                   </div>
@@ -709,412 +765,96 @@ const CarList = ({ user, onBack }) => {
         </div>
       )}
 
-      {/* مودال فروش */}
-      <SellCarModal 
-        isOpen={sellModalOpen} 
-        onClose={() => setSellModalOpen(false)} 
-        car={selectedCarForSale} 
-        user={user} 
-        onSold={() => {
-          setSellModalOpen(false);
-          const carsRef = ref(db, `users/${user.uid}/cars`);
-          onValue(carsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-              const carsArray = Object.entries(data)
-                .filter(([_, value]) => !value.sold)
-                .map(([id, value]) => ({ id, ...value }))
-                .reverse();
-              setCars(carsArray);
-            }
-          }, { onlyOnce: true });
-        }} 
-      />
+      <SellCarModal isOpen={sellModalOpen} onClose={() => setSellModalOpen(false)} car={selectedCarForSale} user={user} onSold={() => {
+        setSellModalOpen(false);
+        window.location.reload();
+      }} />
 
-      {/* مودال تأیید حذف خودرو */}
-      <Modal 
-        isOpen={openConfirmModal} 
-        onClose={() => setOpenConfirmModal(false)} 
-        title="🗑️ تأیید حذف خودرو"
-        color="#ef4444"
-        size="sm"
-      >
-        <div style={confirmModalStyle}>
-          <p style={confirmTextStyle}>
-            آیا از حذف خودرو <strong>"{carToDelete?.carName}"</strong> مطمئن هستید؟
-          </p>
-          <p style={confirmWarningStyle}>این عمل غیرقابل بازگشت است.</p>
-          <div style={confirmBtnContainer}>
-            <button onClick={() => setOpenConfirmModal(false)} style={confirmCancelBtn}>انصراف</button>
-            <button onClick={confirmDelete} style={confirmDeleteBtn}>حذف خودرو</button>
+      <Modal isOpen={openConfirmModal} onClose={() => setOpenConfirmModal(false)} title="🗑️ تأیید حذف خودرو" color="#ef4444" size="sm">
+        <div style={{ textAlign: "center", padding: "10px" }}>
+          <p style={{ fontSize: "16px", marginBottom: "12px" }}>آیا از حذف خودرو <strong>"{carToDelete?.carName}"</strong> مطمئن هستید؟</p>
+          <p style={{ fontSize: "12px", color: "#ef4444", marginBottom: "20px" }}>این عمل غیرقابل بازگشت است.</p>
+          <div style={{ display: "flex", gap: "12px", marginTop: "10px" }}>
+            <button onClick={() => setOpenConfirmModal(false)} style={{ flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>انصراف</button>
+            <button onClick={confirmDelete} style={{ flex: 1, padding: "10px", background: "#ef4444", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>حذف خودرو</button>
           </div>
         </div>
       </Modal>
 
-      {/* مودال تأیید حذف هزینه */}
-      <Modal 
-        isOpen={openConfirmExpenseModal} 
-        onClose={() => setOpenConfirmExpenseModal(false)} 
-        title="🗑️ تأیید حذف هزینه"
-        color="#ef4444"
-        size="sm"
-      >
-        <div style={confirmModalStyle}>
-          <p style={confirmTextStyle}>
-            آیا از حذف هزینه <strong>"{expenseToDelete?.categoryLabel}"</strong> مطمئن هستید؟
-          </p>
-          <p style={confirmWarningStyle}>این عمل غیرقابل بازگشت است.</p>
-          <div style={confirmBtnContainer}>
-            <button onClick={() => setOpenConfirmExpenseModal(false)} style={confirmCancelBtn}>انصراف</button>
-            <button onClick={confirmDeleteExpense} style={confirmDeleteBtn}>حذف هزینه</button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* مودال ثبت هزینه */}
-      <Modal 
-        isOpen={openExpenseModal} 
-        onClose={() => setOpenExpenseModal(false)} 
-        title={`💰 ثبت هزینه جدید برای ${selectedCar?.carName}`}
-        color="#16a34a"
-        size="md"
-      >
-        <div style={modalFormStyle}>
+      <Modal isOpen={openExpenseModal} onClose={() => setOpenExpenseModal(false)} title={`💰 ثبت هزینه جدید برای ${selectedCar?.carName}`} color="#16a34a" size="md">
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <label style={labelStyle}>📂 دسته‌بندی هزینه</label>
-          <select
-            value={expenseCategory}
-            onChange={(e) => setExpenseCategory(e.target.value)}
-            style={inputStyle(0, focusedIndex)}
-            onFocus={() => setFocusedIndex(0)}
-            onBlur={() => setFocusedIndex(null)}
-          >
+          <select value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} style={inputStyle(0, focusedIndex)}>
             <option value="" disabled>انتخاب کنید</option>
             {expenseCategories.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.icon} {cat.label}
-              </option>
+              <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>
             ))}
           </select>
 
           <label style={labelStyle}>💰 مبلغ (تومان)</label>
-          <input
-            type="text"
-            value={expenseAmount ? Number(expenseAmount).toLocaleString() : ""}
-            onChange={handleExpenseAmountChange}
-            style={{...inputStyle(1, focusedIndex), textAlign: "left", direction: "ltr"}}
-            onFocus={() => setFocusedIndex(1)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="مثال: 500,000"
-          />
+          <input type="text" value={expenseAmount ? Number(expenseAmount).toLocaleString() : ""} onChange={handleExpenseAmountChange} style={{...inputStyle(1, focusedIndex), textAlign: "left", direction: "ltr"}} placeholder="مثال: 500,000" />
           {expenseAmount && expenseAmount !== "0" && (
-            <div style={priceHintStyle}>{numberToWords(Number(expenseAmount))} تومان</div>
+            <div style={{ fontSize: "11px", color: "#10b981", marginBottom: "15px", marginTop: "-8px" }}>{numberToWords(Number(expenseAmount))} تومان</div>
           )}
 
           <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
-          <textarea
-            value={expenseDescription}
-            onChange={(e) => setExpenseDescription(e.target.value)}
-            style={textareaStyle(2, focusedIndex)}
-            onFocus={() => setFocusedIndex(2)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="توضیحات مربوط به هزینه..."
-            rows="3"
-          />
+          <textarea value={expenseDescription} onChange={(e) => setExpenseDescription(e.target.value)} style={{...inputStyle(2, focusedIndex), minHeight: "60px", resize: "vertical"}} placeholder="توضیحات مربوط به هزینه..." rows="3" />
 
-          <div style={modalBtnContainer}>
-            <button onClick={() => setOpenExpenseModal(false)} style={cancelBtnStyle}>انصراف</button>
-            <button onClick={handleAddExpense} disabled={isAdding} style={submitBtnStyle}>
-              {isAdding ? "در حال ثبت..." : "ثبت هزینه"}
-            </button>
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            <button onClick={() => setOpenExpenseModal(false)} style={{ flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>انصراف</button>
+            <button onClick={handleAddExpense} disabled={isAdding} style={{ flex: 1, padding: "10px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>{isAdding ? "در حال ثبت..." : "ثبت هزینه"}</button>
           </div>
         </div>
       </Modal>
 
-      {/* مودال ویرایش هزینه */}
-      <Modal 
-        isOpen={openEditExpenseModal} 
-        onClose={() => {
-          setOpenEditExpenseModal(false);
-          setEditingExpense(null);
-        }} 
-        title="✏️ ویرایش هزینه"
-        color="#8b5cf6"
-        size="md"
-      >
-        <div style={modalFormStyle}>
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="➕ ثبت خودرو جدید" color="#16a34a" size="md">
+        <CarForm user={user} onSaved={() => { setShowAddModal(false); window.location.reload(); }} onCancel={() => setShowAddModal(false)} />
+      </Modal>
+
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="✏️ ویرایش خودرو" color="#8b5cf6" size="md">
+        <CarForm user={user} editingCar={editingCar} onSaved={() => { setShowEditModal(false); window.location.reload(); }} onCancel={() => setShowEditModal(false)} />
+      </Modal>
+
+      <Modal isOpen={openEditExpenseModal} onClose={() => setOpenEditExpenseModal(false)} title="✏️ ویرایش هزینه" color="#8b5cf6" size="md">
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <label style={labelStyle}>📂 دسته‌بندی هزینه</label>
-          <select
-            value={editExpenseCategory}
-            onChange={(e) => setEditExpenseCategory(e.target.value)}
-            style={inputStyle(10, focusedIndex)}
-            onFocus={() => setFocusedIndex(10)}
-            onBlur={() => setFocusedIndex(null)}
-          >
+          <select value={editExpenseCategory} onChange={(e) => setEditExpenseCategory(e.target.value)} style={inputStyle(10, focusedIndex)}>
             <option value="" disabled>انتخاب کنید</option>
             {expenseCategories.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.icon} {cat.label}
-              </option>
+              <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>
             ))}
           </select>
 
           <label style={labelStyle}>💰 مبلغ (تومان)</label>
-          <input
-            type="text"
-            value={editExpenseAmount ? Number(editExpenseAmount).toLocaleString() : ""}
-            onChange={handleEditExpenseAmountChange}
-            style={{...inputStyle(11, focusedIndex), textAlign: "left", direction: "ltr"}}
-            onFocus={() => setFocusedIndex(11)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="مثال: 500,000"
-          />
-          {editExpenseAmount && editExpenseAmount !== "0" && (
-            <div style={priceHintStyle}>{numberToWords(Number(editExpenseAmount))} تومان</div>
-          )}
+          <input type="text" value={editExpenseAmount ? Number(editExpenseAmount).toLocaleString() : ""} onChange={(e) => {
+            let raw = e.target.value.replace(/,/g, "");
+            if (raw === "" || /^\d+$/.test(raw)) setEditExpenseAmount(raw);
+          }} style={{...inputStyle(11, focusedIndex), textAlign: "left", direction: "ltr"}} placeholder="مبلغ هزینه" />
 
           <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
-          <textarea
-            value={editExpenseDescription}
-            onChange={(e) => setEditExpenseDescription(e.target.value)}
-            style={textareaStyle(12, focusedIndex)}
-            onFocus={() => setFocusedIndex(12)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="توضیحات مربوط به هزینه..."
-            rows="3"
-          />
+          <textarea value={editExpenseDescription} onChange={(e) => setEditExpenseDescription(e.target.value)} style={{...inputStyle(12, focusedIndex), minHeight: "60px", resize: "vertical"}} placeholder="توضیحات" />
 
-          <div style={modalBtnContainer}>
-            <button onClick={() => setOpenEditExpenseModal(false)} style={cancelBtnStyle}>انصراف</button>
-            <button onClick={handleUpdateExpense} style={submitBtnStyle}>
-              ویرایش هزینه
-            </button>
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            <button onClick={() => setOpenEditExpenseModal(false)} style={{ flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>انصراف</button>
+            <button onClick={handleUpdateExpense} style={{ flex: 1, padding: "10px", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>ویرایش هزینه</button>
           </div>
         </div>
       </Modal>
 
-      {/* مودال ثبت خودرو جدید */}
-      <Modal 
-        isOpen={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
-        title="➕ ثبت خودرو جدید"
-        color="#16a34a"
-        size="md"
-      >
-        <CarForm 
-          user={user}
-          onSaved={() => {
-            setShowAddModal(false);
-          }}
-          onCancel={() => setShowAddModal(false)}
-        />
+      <Modal isOpen={openConfirmExpenseModal} onClose={() => setOpenConfirmExpenseModal(false)} title="🗑️ حذف هزینه" color="#ef4444" size="sm">
+        <div style={{ textAlign: "center", padding: "20px" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>⚠️</div>
+          <p style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e293b" }}>آیا از حذف این هزینه مطمئن هستید؟</p>
+          <p style={{ fontSize: "14px", color: "#64748b", marginBottom: "8px" }}><strong>"{expenseToDelete?.categoryLabel}"</strong></p>
+          <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "24px", marginTop: "12px" }}>مبلغ: {formatPrice(expenseToDelete?.amount)} تومان</p>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button onClick={() => setOpenConfirmExpenseModal(false)} style={{ padding: "10px 24px", background: "#64748b", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "500" }}>انصراف</button>
+            <button onClick={confirmDeleteExpense} style={{ padding: "10px 24px", background: "#ef4444", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "bold" }}>حذف هزینه</button>
+          </div>
+        </div>
       </Modal>
-
-      {/* مودال ویرایش خودرو */}
-      <Modal 
-        isOpen={showEditModal} 
-        onClose={() => {
-          setShowEditModal(false);
-          setEditingCar(null);
-        }} 
-        title="✏️ ویرایش خودرو"
-        color="#8b5cf6"
-        size="md"
-      >
-        <CarForm 
-          user={user}
-          editingCar={editingCar}
-          onSaved={() => {
-            setShowEditModal(false);
-            setEditingCar(null);
-          }}
-          onCancel={() => {
-            setShowEditModal(false);
-            setEditingCar(null);
-          }}
-        />
-      </Modal>
-
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };
-
-// استایل‌ها (همان استایل‌های قبلی)
-const toastStyle = {
-  position: "fixed", top: "20px", right: "20px", padding: "12px 20px", borderRadius: "12px", color: "#fff", fontSize: "14px", fontWeight: "500", zIndex: 10000, boxShadow: "0 10px 25px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: "10px"
-};
-const loadingStyle = { textAlign: "center", padding: "40px" };
-const emptyStyle = { textAlign: "center", padding: "60px", background: "#fff", borderRadius: "12px" };
-
-const headerButtonsStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "20px",
-  gap: "10px",
-  flexWrap: "wrap"
-};
-
-const backBtnStyle = {
-  background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px"
-};
-
-const addNewBtnStyle = {
-  background: "#16a34a", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "bold"
-};
-
-const emptyAddBtnStyle = {
-  background: "#16a34a", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", marginTop: "20px"
-};
-
-const statsContainerStyle = { 
-  display: "grid", 
-  gridTemplateColumns: "repeat(2, 1fr)", 
-  gap: "16px", 
-  marginBottom: "24px", 
-  maxWidth: "700px", 
-  margin: "0 auto 24px auto" 
-};
-
-const statCardStyle = { 
-  background: "linear-gradient(135deg, #3b82f6, #2563eb)", 
-  padding: "16px 20px", 
-  borderRadius: "16px", 
-  color: "#fff", 
-  display: "flex", 
-  alignItems: "center", 
-  gap: "15px", 
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)" 
-};
-
-const statCardStyle2 = { 
-  background: "linear-gradient(135deg, #ef4444, #dc2626)", 
-  padding: "16px 20px", 
-  borderRadius: "16px", 
-  color: "#fff", 
-  display: "flex", 
-  alignItems: "center", 
-  gap: "15px", 
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)" 
-};
-
-const statIconStyle = { fontSize: "32px" };
-const statValueStyle = { fontSize: "24px", fontWeight: "bold" };
-const statLabelStyle = { fontSize: "12px", opacity: 0.9 };
-const statWordsSmall = { fontSize: "10px", opacity: 0.8, marginTop: "5px" };
-
-const carsGridStyle = { 
-  display: "flex", 
-  flexDirection: "column", 
-  gap: "20px",
-  alignItems: "center"
-};
-
-const carCardStyle = { 
-  background: "#fff", 
-  borderRadius: "16px", 
-  overflow: "hidden", 
-  boxShadow: "0 4px 20px rgba(0,0,0,0.08)", 
-  transition: "all 0.3s",
-  maxWidth: "700px",
-  width: "100%"
-};
-
-const carHeaderStyle = { padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" };
-const carTitleStyle = { display: "flex", alignItems: "center", gap: "8px" };
-const carIconStyle = { fontSize: "20px" };
-const carNameStyle = { margin: 0, fontSize: "16px", fontWeight: "bold" };
-const cardContentStyle = { padding: "16px" };
-
-const sellBtnStyle = {
-  flex: 1,
-  padding: "8px",
-  background: "#f59e0b",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontSize: "12px",
-  fontWeight: "bold"
-};
-
-const addExpenseBtnStyle = { 
-  flex: 1,
-  padding: "8px",
-  background: "#3b82f6", 
-  color: "#fff", 
-  border: "none", 
-  borderRadius: "10px", 
-  cursor: "pointer", 
-  fontSize: "12px",
-  fontWeight: "bold"
-};
-
-const editBtnStyle = {
-  flex: 1,
-  padding: "8px",
-  background: "#8b5cf6",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontSize: "12px",
-  fontWeight: "bold"
-};
-
-const deleteBtnStyle = { 
-  flex: 1,
-  padding: "8px",
-  background: "#ef4444", 
-  border: "none", 
-  borderRadius: "10px", 
-  cursor: "pointer", 
-  fontSize: "12px",
-  fontWeight: "bold"
-};
-
-const expenseAmountStyle = { 
-  fontSize: "12px", 
-  fontWeight: "bold", 
-  color: "#ef4444" 
-};
-
-const expenseDescStyle = { 
-  fontSize: "10px", 
-  color: "#64748b", 
-  marginTop: "4px" 
-};
-
-const modalFormStyle = { display: "flex", flexDirection: "column", gap: "12px" };
-const textareaStyle = (index, focusedIndex) => ({ 
-  padding: "8px 10px", 
-  borderRadius: "8px", 
-  width: "100%", 
-  boxSizing: "border-box", 
-  fontSize: "13px", 
-  backgroundColor: "#ffffff", 
-  color: "#000000", 
-  border: focusedIndex === index ? "2px solid #3b82f6" : "1px solid #d1d5db", 
-  outline: "none", 
-  transition: "all 0.2s ease-in-out", 
-  fontFamily: "inherit", 
-  resize: "vertical", 
-  minHeight: "60px" 
-});
-const priceHintStyle = { fontSize: "11px", color: "#10b981", marginBottom: "15px", marginTop: "-8px", paddingRight: "4px" };
-const modalBtnContainer = { display: "flex", gap: "10px", marginTop: "10px" };
-const cancelBtnStyle = { flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" };
-const submitBtnStyle = { flex: 1, padding: "10px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" };
-const confirmModalStyle = { textAlign: "center", padding: "10px" };
-const confirmTextStyle = { fontSize: "16px", marginBottom: "12px" };
-const confirmWarningStyle = { fontSize: "12px", color: "#ef4444", marginBottom: "20px" };
-const confirmBtnContainer = { display: "flex", gap: "12px", marginTop: "10px" };
-const confirmCancelBtn = { flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" };
-const confirmDeleteBtn = { flex: 1, padding: "10px", background: "#ef4444", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" };
 
 export default CarList;

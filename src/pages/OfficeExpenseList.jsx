@@ -28,14 +28,19 @@ const OfficeExpenseList = ({ user, onBack }) => {
     description: ""
   });
 
+  const emailKey = user?.email?.replace(/\./g, '_').replace(/@/g, '_at_') || "";
+
   const showToast = (message, type) => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
   useEffect(() => {
-    if (!user) return;
-    const expensesRef = ref(db, `users/${user.uid}/officeExpenses`);
+    if (!user || !emailKey) {
+      setLoading(false);
+      return;
+    }
+    const expensesRef = ref(db, `users_emails/${emailKey}/officeExpenses`);
     const unsubscribe = onValue(expensesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -50,7 +55,7 @@ const OfficeExpenseList = ({ user, onBack }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   const handleAddExpense = async () => {
     if (!newExpense.title.trim()) {
@@ -63,7 +68,7 @@ const OfficeExpenseList = ({ user, onBack }) => {
     }
 
     try {
-      const expensesRef = ref(db, `users/${user.uid}/officeExpenses`);
+      const expensesRef = ref(db, `users_emails/${emailKey}/officeExpenses`);
       const persianDate = new Intl.DateTimeFormat('fa-IR', {
         year: 'numeric',
         month: '2-digit',
@@ -112,7 +117,7 @@ const OfficeExpenseList = ({ user, onBack }) => {
     }
 
     try {
-      const expenseRef = ref(db, `users/${user.uid}/officeExpenses/${editingExpense.id}`);
+      const expenseRef = ref(db, `users_emails/${emailKey}/officeExpenses/${editingExpense.id}`);
       await update(expenseRef, {
         title: editExpense.title.trim(),
         amount: Number(editExpense.amount),
@@ -136,7 +141,7 @@ const OfficeExpenseList = ({ user, onBack }) => {
   const confirmDelete = async () => {
     if (!expenseToDelete) return;
     try {
-      await remove(ref(db, `users/${user.uid}/officeExpenses/${expenseToDelete.id}`));
+      await remove(ref(db, `users_emails/${emailKey}/officeExpenses/${expenseToDelete.id}`));
       showToast(`✅ هزینه "${expenseToDelete.title}" با موفقیت حذف شد`, "success");
     } catch (error) {
       showToast("❌ خطا در حذف هزینه", "error");
@@ -150,7 +155,6 @@ const OfficeExpenseList = ({ user, onBack }) => {
 
   const numberToWords = (num) => {
     if (!num || num === 0) return "صفر";
-    
     const ones = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"];
     const tens = ["", "", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود"];
     const hundreds = ["", "یکصد", "دویست", "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد"];
@@ -229,7 +233,6 @@ const OfficeExpenseList = ({ user, onBack }) => {
     fontWeight: "500"
   };
 
-  // استایل‌های جدید مثل ArchivedCars
   const rightBoxStyle = (type) => {
     switch(type) {
       case 'title':
@@ -267,6 +270,7 @@ const OfficeExpenseList = ({ user, onBack }) => {
   };
 
   const wordsStyle = { fontSize: "9px", color: "#64748b", marginTop: "3px", textAlign: "left" };
+  const tinyWordsStyle = { fontSize: "8px", color: "#94a3b8", marginTop: "2px", textAlign: "left" };
 
   const infoSectionStyle = { 
     marginBottom: "12px", 
@@ -302,8 +306,44 @@ const OfficeExpenseList = ({ user, onBack }) => {
     borderTop: "1px solid #e2e8f0"
   };
 
+  // استایل بارگذاری
+  const loadingStyle = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "60vh",
+    flexDirection: "column",
+    gap: "16px"
+  };
+
+  const loadingSpinner = {
+    width: "50px",
+    height: "50px",
+    border: "4px solid #e2e8f0",
+    borderTop: "4px solid #f59e0b",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite"
+  };
+
+  const loadingText = {
+    fontSize: "14px",
+    color: "#64748b",
+    fontWeight: "500"
+  };
+
   if (loading) {
-    return <div style={loadingStyle}>در حال بارگذاری...</div>;
+    return (
+      <div style={loadingStyle}>
+        <div style={loadingSpinner}></div>
+        <p style={loadingText}>در حال بارگذاری...</p>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
@@ -393,7 +433,6 @@ const OfficeExpenseList = ({ user, onBack }) => {
                     </div>
                   </div>
 
-                  {/* سه ستون مثل بایگانی */}
                   <div style={threeColumnsStyle}>
                     <div style={columnCardStyle}>
                       <div style={columnTitleStyle}>💰 مبلغ هزینه</div>
@@ -402,15 +441,10 @@ const OfficeExpenseList = ({ user, onBack }) => {
                         <div style={wordsStyle}>{numberToWords(expense.amount)} تومان</div>
                       </div>
                     </div>
-                    <div style={columnCardStyle}>
-                      {/* خالی برای تقارن */}
-                    </div>
-                    <div style={columnCardStyle}>
-                      {/* خالی برای تقارن */}
-                    </div>
+                    <div style={columnCardStyle}></div>
+                    <div style={columnCardStyle}></div>
                   </div>
 
-                  {/* دکمه‌های عملیات */}
                   <div style={buttonContainerStyle}>
                     <button onClick={() => handleEditClick(expense)} style={editBtnStyle}>
                       ✏️ ویرایش
@@ -426,55 +460,15 @@ const OfficeExpenseList = ({ user, onBack }) => {
         </div>
       )}
 
-      {/* مودال ثبت هزینه */}
-      <Modal 
-        isOpen={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
-        title="➕ ثبت هزینه جدید"
-        color="#f59e0b"
-        size="md"
-      >
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="➕ ثبت هزینه جدید" color="#f59e0b" size="md">
         <div style={modalFormStyle}>
           <label style={labelStyle}>📌 عنوان هزینه *</label>
-          <input
-            type="text"
-            placeholder="مثال: قبض برق"
-            value={newExpense.title}
-            onChange={(e) => setNewExpense({...newExpense, title: e.target.value})}
-            style={inputStyle(0, focusedIndex)}
-            onFocus={() => setFocusedIndex(0)}
-            onBlur={() => setFocusedIndex(null)}
-          />
-
+          <input type="text" placeholder="مثال: قبض برق" value={newExpense.title} onChange={(e) => setNewExpense({...newExpense, title: e.target.value})} style={inputStyle(0, focusedIndex)} />
           <label style={labelStyle}>💰 مبلغ (تومان) *</label>
-          <input
-            type="text"
-            value={newExpense.amount ? Number(newExpense.amount).toLocaleString() : ""}
-            onChange={(e) => {
-              let raw = e.target.value.replace(/,/g, "");
-              if (raw === "" || /^\d+$/.test(raw)) {
-                setNewExpense({...newExpense, amount: raw});
-              }
-            }}
-            style={{...inputStyle(1, focusedIndex), textAlign: "left", direction: "ltr"}}
-            onFocus={() => setFocusedIndex(1)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="مثال: 500,000"
-          />
-          {newExpense.amount && newExpense.amount !== "0" && (
-            <div style={priceHintStyle}>{numberToWords(Number(newExpense.amount))} تومان</div>
-          )}
-
+          <input type="text" value={newExpense.amount ? Number(newExpense.amount).toLocaleString() : ""} onChange={(e) => { let raw = e.target.value.replace(/,/g, ""); if (raw === "" || /^\d+$/.test(raw)) setNewExpense({...newExpense, amount: raw}); }} style={{...inputStyle(1, focusedIndex), textAlign: "left", direction: "ltr"}} placeholder="مثال: 500,000" />
+          {newExpense.amount && newExpense.amount !== "0" && <div style={{ fontSize: "11px", color: "#10b981", marginBottom: "15px", marginTop: "-8px" }}>{numberToWords(Number(newExpense.amount))} تومان</div>}
           <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
-          <textarea
-            value={newExpense.description}
-            onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-            style={{...inputStyle(2, focusedIndex), minHeight: "60px", resize: "vertical"}}
-            onFocus={() => setFocusedIndex(2)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="توضیحات اضافی..."
-          />
-
+          <textarea value={newExpense.description} onChange={(e) => setNewExpense({...newExpense, description: e.target.value})} style={{...inputStyle(2, focusedIndex), minHeight: "60px", resize: "vertical"}} placeholder="توضیحات اضافی..." rows="3" />
           <div style={modalBtnContainer}>
             <button onClick={() => setShowAddModal(false)} style={cancelBtnStyle}>انصراف</button>
             <button onClick={handleAddExpense} style={submitBtnStyle}>✅ ثبت هزینه</button>
@@ -482,55 +476,15 @@ const OfficeExpenseList = ({ user, onBack }) => {
         </div>
       </Modal>
 
-      {/* مودال ویرایش هزینه */}
-      <Modal 
-        isOpen={showEditModal} 
-        onClose={() => setShowEditModal(false)} 
-        title="✏️ ویرایش هزینه"
-        color="#8b5cf6"
-        size="md"
-      >
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="✏️ ویرایش هزینه" color="#8b5cf6" size="md">
         <div style={modalFormStyle}>
           <label style={labelStyle}>📌 عنوان هزینه *</label>
-          <input
-            type="text"
-            placeholder="مثال: قبض برق"
-            value={editExpense.title}
-            onChange={(e) => setEditExpense({...editExpense, title: e.target.value})}
-            style={inputStyle(10, focusedIndex)}
-            onFocus={() => setFocusedIndex(10)}
-            onBlur={() => setFocusedIndex(null)}
-          />
-
+          <input type="text" placeholder="مثال: قبض برق" value={editExpense.title} onChange={(e) => setEditExpense({...editExpense, title: e.target.value})} style={inputStyle(10, focusedIndex)} />
           <label style={labelStyle}>💰 مبلغ (تومان) *</label>
-          <input
-            type="text"
-            value={editExpense.amount ? Number(editExpense.amount).toLocaleString() : ""}
-            onChange={(e) => {
-              let raw = e.target.value.replace(/,/g, "");
-              if (raw === "" || /^\d+$/.test(raw)) {
-                setEditExpense({...editExpense, amount: raw});
-              }
-            }}
-            style={{...inputStyle(11, focusedIndex), textAlign: "left", direction: "ltr"}}
-            onFocus={() => setFocusedIndex(11)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="مثال: 500,000"
-          />
-          {editExpense.amount && editExpense.amount !== "0" && (
-            <div style={priceHintStyle}>{numberToWords(Number(editExpense.amount))} تومان</div>
-          )}
-
+          <input type="text" value={editExpense.amount ? Number(editExpense.amount).toLocaleString() : ""} onChange={(e) => { let raw = e.target.value.replace(/,/g, ""); if (raw === "" || /^\d+$/.test(raw)) setEditExpense({...editExpense, amount: raw}); }} style={{...inputStyle(11, focusedIndex), textAlign: "left", direction: "ltr"}} placeholder="مبلغ هزینه" />
+          {editExpense.amount && editExpense.amount !== "0" && <div style={{ fontSize: "11px", color: "#10b981", marginBottom: "15px", marginTop: "-8px" }}>{numberToWords(Number(editExpense.amount))} تومان</div>}
           <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
-          <textarea
-            value={editExpense.description}
-            onChange={(e) => setEditExpense({...editExpense, description: e.target.value})}
-            style={{...inputStyle(12, focusedIndex), minHeight: "60px", resize: "vertical"}}
-            onFocus={() => setFocusedIndex(12)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="توضیحات اضافی..."
-          />
-
+          <textarea value={editExpense.description} onChange={(e) => setEditExpense({...editExpense, description: e.target.value})} style={{...inputStyle(12, focusedIndex), minHeight: "60px", resize: "vertical"}} placeholder="توضیحات" />
           <div style={modalBtnContainer}>
             <button onClick={() => setShowEditModal(false)} style={cancelBtnStyle}>انصراف</button>
             <button onClick={handleUpdateExpense} style={submitBtnPurpleStyle}>✏️ ویرایش هزینه</button>
@@ -538,18 +492,9 @@ const OfficeExpenseList = ({ user, onBack }) => {
         </div>
       </Modal>
 
-      {/* مودال تأیید حذف */}
-      <Modal 
-        isOpen={openConfirmModal} 
-        onClose={() => setOpenConfirmModal(false)} 
-        title="🗑️ تأیید حذف"
-        color="#ef4444"
-        size="sm"
-      >
+      <Modal isOpen={openConfirmModal} onClose={() => setOpenConfirmModal(false)} title="🗑️ تأیید حذف" color="#ef4444" size="sm">
         <div style={confirmModalStyle}>
-          <p style={confirmTextStyle}>
-            آیا از حذف هزینه <strong>"{expenseToDelete?.title}"</strong> مطمئن هستید؟
-          </p>
+          <p style={confirmTextStyle}>آیا از حذف هزینه <strong>"{expenseToDelete?.title}"</strong> مطمئن هستید؟</p>
           <p style={confirmWarningStyle}>این عمل غیرقابل بازگشت است.</p>
           <div style={confirmBtnContainer}>
             <button onClick={() => setOpenConfirmModal(false)} style={confirmCancelBtn}>انصراف</button>
@@ -558,44 +503,19 @@ const OfficeExpenseList = ({ user, onBack }) => {
         </div>
       </Modal>
 
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
+      <style>{`@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
     </div>
   );
 };
 
-// استایل‌های جدید مثل ArchivedCars
-const toastStyle = {
-  position: "fixed", top: "20px", right: "20px", padding: "12px 20px", borderRadius: "12px", color: "#fff", fontSize: "14px", fontWeight: "500", zIndex: 10000, boxShadow: "0 10px 25px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: "10px"
-};
+const toastStyle = { position: "fixed", top: "20px", right: "20px", padding: "12px 20px", borderRadius: "12px", color: "#fff", fontSize: "14px", fontWeight: "500", zIndex: 10000, boxShadow: "0 10px 25px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: "10px" };
 const loadingStyle = { textAlign: "center", padding: "40px" };
 const emptyStyle = { textAlign: "center", padding: "60px", background: "#fff", borderRadius: "12px" };
 
-const headerButtonsStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "20px",
-  gap: "10px",
-  flexWrap: "wrap"
-};
-
-const backBtnStyle = {
-  background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px"
-};
-
-const addBtnStyle = {
-  background: "#f59e0b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "bold"
-};
-
-const emptyAddBtnStyle = {
-  background: "#f59e0b", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "bold", marginTop: "20px"
-};
-
+const headerButtonsStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", gap: "10px", flexWrap: "wrap" };
+const backBtnStyle = { background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px" };
+const addBtnStyle = { background: "#f59e0b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" };
+const emptyAddBtnStyle = { background: "#f59e0b", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "bold", marginTop: "20px" };
 const pageTitleWrapper = { flex: 1, textAlign: "center" };
 const pageTitleTextStyle = { fontSize: "20px", fontWeight: "bold", color: "#1e293b", margin: 0 };
 
@@ -607,53 +527,17 @@ const statValueStyle = { fontSize: "24px", fontWeight: "bold" };
 const statLabelStyle = { fontSize: "12px", opacity: 0.9 };
 const statWordsSmall = { fontSize: "10px", opacity: 0.8, marginTop: "5px" };
 
-const carsGridStyle = { 
-  display: "flex", 
-  flexDirection: "column", 
-  gap: "20px",
-  alignItems: "center"
-};
-
-const archiveCardStyle = { 
-  background: "#fff", 
-  borderRadius: "16px", 
-  overflow: "hidden", 
-  boxShadow: "0 4px 20px rgba(0,0,0,0.08)", 
-  transition: "all 0.3s",
-  maxWidth: "700px",
-  width: "100%"
-};
-
+const carsGridStyle = { display: "flex", flexDirection: "column", gap: "20px", alignItems: "center" };
+const archiveCardStyle = { background: "#fff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", transition: "all 0.3s", maxWidth: "700px", width: "100%" };
 const archiveHeaderStyle = { background: "linear-gradient(135deg, #f59e0b, #ea580c)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" };
 const archiveTitleStyle = { margin: 0, fontSize: "16px", fontWeight: "bold", color: "#fff" };
 const archiveBadgeStyle = { background: "#ffffff", padding: "4px 10px", borderRadius: "20px", fontSize: "11px", color: "#f59e0b", fontWeight: "bold" };
 const archiveContentStyle = { padding: "16px" };
 
-const editBtnStyle = {
-  flex: 1,
-  padding: "8px",
-  background: "#8b5cf6",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontSize: "12px",
-  fontWeight: "bold"
-};
-
-const deleteBtnStyle = { 
-  flex: 1,
-  padding: "8px",
-  background: "#ef4444", 
-  border: "none", 
-  borderRadius: "10px", 
-  cursor: "pointer", 
-  fontSize: "12px",
-  fontWeight: "bold"
-};
+const editBtnStyle = { flex: 1, padding: "8px", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" };
+const deleteBtnStyle = { flex: 1, padding: "8px", background: "#ef4444", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" };
 
 const modalFormStyle = { display: "flex", flexDirection: "column", gap: "12px" };
-const priceHintStyle = { fontSize: "11px", color: "#10b981", marginBottom: "15px", marginTop: "-8px", paddingRight: "4px" };
 const modalBtnContainer = { display: "flex", gap: "10px", marginTop: "10px" };
 const cancelBtnStyle = { flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" };
 const submitBtnStyle = { flex: 1, padding: "10px", background: "#f59e0b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" };

@@ -28,14 +28,19 @@ const IncomeList = ({ user, onBack }) => {
     description: ""
   });
 
+  const emailKey = user?.email?.replace(/\./g, '_').replace(/@/g, '_at_') || "";
+
   const showToast = (message, type) => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
   useEffect(() => {
-    if (!user) return;
-    const incomesRef = ref(db, `users/${user.uid}/incomes`);
+    if (!user || !emailKey) {
+      setLoading(false);
+      return;
+    }
+    const incomesRef = ref(db, `users_emails/${emailKey}/incomes`);
     const unsubscribe = onValue(incomesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -50,7 +55,7 @@ const IncomeList = ({ user, onBack }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   const handleAddIncome = async () => {
     if (!newIncome.title.trim()) {
@@ -63,7 +68,7 @@ const IncomeList = ({ user, onBack }) => {
     }
 
     try {
-      const incomesRef = ref(db, `users/${user.uid}/incomes`);
+      const incomesRef = ref(db, `users_emails/${emailKey}/incomes`);
       const persianDate = new Intl.DateTimeFormat('fa-IR', {
         year: 'numeric',
         month: '2-digit',
@@ -112,7 +117,7 @@ const IncomeList = ({ user, onBack }) => {
     }
 
     try {
-      const incomeRef = ref(db, `users/${user.uid}/incomes/${editingIncome.id}`);
+      const incomeRef = ref(db, `users_emails/${emailKey}/incomes/${editingIncome.id}`);
       await update(incomeRef, {
         title: editIncome.title.trim(),
         amount: Number(editIncome.amount),
@@ -136,7 +141,7 @@ const IncomeList = ({ user, onBack }) => {
   const confirmDelete = async () => {
     if (!incomeToDelete) return;
     try {
-      await remove(ref(db, `users/${user.uid}/incomes/${incomeToDelete.id}`));
+      await remove(ref(db, `users_emails/${emailKey}/incomes/${incomeToDelete.id}`));
       showToast(`✅ درآمد "${incomeToDelete.title}" با موفقیت حذف شد`, "success");
     } catch (error) {
       showToast("❌ خطا در حذف درآمد", "error");
@@ -150,7 +155,6 @@ const IncomeList = ({ user, onBack }) => {
 
   const numberToWords = (num) => {
     if (!num || num === 0) return "صفر";
-    
     const ones = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"];
     const tens = ["", "", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود"];
     const hundreds = ["", "یکصد", "دویست", "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد"];
@@ -229,15 +233,14 @@ const IncomeList = ({ user, onBack }) => {
     fontWeight: "500"
   };
 
-  // استایل‌های مثل ArchivedCars
   const rightBoxStyle = (type) => {
     switch(type) {
       case 'title':
         return { backgroundColor: "#e0e7ff", borderRadius: "12px", padding: "6px 10px", textAlign: "left", fontWeight: "bold", color: "#4338ca", fontSize: "12px" };
       case 'amount':
-        return { backgroundColor: "#ecfdf5", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
+        return { backgroundColor: "#dcfce7", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
       case 'date':
-        return { backgroundColor: "#dcfce7", borderRadius: "12px", padding: "6px 10px", textAlign: "left", color: "#16a34a", fontWeight: "500", fontSize: "12px" };
+        return { backgroundColor: "#dbeafe", borderRadius: "12px", padding: "6px 10px", textAlign: "left", color: "#1e40af", fontWeight: "500", fontSize: "12px" };
       default:
         return { backgroundColor: "#f8fafc", borderRadius: "12px", padding: "8px 10px", textAlign: "left" };
     }
@@ -267,6 +270,7 @@ const IncomeList = ({ user, onBack }) => {
   };
 
   const wordsStyle = { fontSize: "9px", color: "#64748b", marginTop: "3px", textAlign: "left" };
+  const tinyWordsStyle = { fontSize: "8px", color: "#94a3b8", marginTop: "2px", textAlign: "left" };
 
   const infoSectionStyle = { 
     marginBottom: "12px", 
@@ -302,8 +306,44 @@ const IncomeList = ({ user, onBack }) => {
     borderTop: "1px solid #e2e8f0"
   };
 
+  // استایل بارگذاری
+  const loadingStyle = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "60vh",
+    flexDirection: "column",
+    gap: "16px"
+  };
+
+  const loadingSpinner = {
+    width: "50px",
+    height: "50px",
+    border: "4px solid #e2e8f0",
+    borderTop: "4px solid #f59e0b",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite"
+  };
+
+  const loadingText = {
+    fontSize: "14px",
+    color: "#64748b",
+    fontWeight: "500"
+  };
+
   if (loading) {
-    return <div style={loadingStyle}>در حال بارگذاری...</div>;
+    return (
+      <div style={loadingStyle}>
+        <div style={loadingSpinner}></div>
+        <p style={loadingText}>در حال بارگذاری...</p>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
@@ -393,7 +433,6 @@ const IncomeList = ({ user, onBack }) => {
                     </div>
                   </div>
 
-                  {/* سه ستون مثل بایگانی */}
                   <div style={threeColumnsStyle}>
                     <div style={columnCardStyle}>
                       <div style={columnTitleStyle}>💰 مبلغ درآمد</div>
@@ -402,22 +441,13 @@ const IncomeList = ({ user, onBack }) => {
                         <div style={wordsStyle}>{numberToWords(income.amount)} تومان</div>
                       </div>
                     </div>
-                    <div style={columnCardStyle}>
-                      {/* خالی برای تقارن */}
-                    </div>
-                    <div style={columnCardStyle}>
-                      {/* خالی برای تقارن */}
-                    </div>
+                    <div style={columnCardStyle}></div>
+                    <div style={columnCardStyle}></div>
                   </div>
 
-                  {/* دکمه‌های عملیات */}
                   <div style={buttonContainerStyle}>
-                    <button onClick={() => handleEditClick(income)} style={editBtnStyle}>
-                      ✏️ ویرایش
-                    </button>
-                    <button onClick={() => handleDeleteClick(income)} style={deleteBtnStyle}>
-                      🗑️ حذف
-                    </button>
+                    <button onClick={() => handleEditClick(income)} style={editBtnStyle}>✏️ ویرایش</button>
+                    <button onClick={() => handleDeleteClick(income)} style={deleteBtnStyle}>🗑️ حذف</button>
                   </div>
                 </div>
               </div>
@@ -426,55 +456,15 @@ const IncomeList = ({ user, onBack }) => {
         </div>
       )}
 
-      {/* مودال ثبت درآمد */}
-      <Modal 
-        isOpen={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
-        title="➕ ثبت درآمد جدید"
-        color="#10b981"
-        size="md"
-      >
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="➕ ثبت درآمد جدید" color="#10b981" size="md">
         <div style={modalFormStyle}>
           <label style={labelStyle}>📌 عنوان درآمد *</label>
-          <input
-            type="text"
-            placeholder="مثال: حقوق ماهیانه"
-            value={newIncome.title}
-            onChange={(e) => setNewIncome({...newIncome, title: e.target.value})}
-            style={inputStyle(0, focusedIndex)}
-            onFocus={() => setFocusedIndex(0)}
-            onBlur={() => setFocusedIndex(null)}
-          />
-
+          <input type="text" placeholder="مثال: حقوق ماهیانه" value={newIncome.title} onChange={(e) => setNewIncome({...newIncome, title: e.target.value})} style={inputStyle(0, focusedIndex)} />
           <label style={labelStyle}>💰 مبلغ (تومان) *</label>
-          <input
-            type="text"
-            value={newIncome.amount ? Number(newIncome.amount).toLocaleString() : ""}
-            onChange={(e) => {
-              let raw = e.target.value.replace(/,/g, "");
-              if (raw === "" || /^\d+$/.test(raw)) {
-                setNewIncome({...newIncome, amount: raw});
-              }
-            }}
-            style={{...inputStyle(1, focusedIndex), textAlign: "left", direction: "ltr"}}
-            onFocus={() => setFocusedIndex(1)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="مثال: 5,000,000"
-          />
-          {newIncome.amount && newIncome.amount !== "0" && (
-            <div style={priceHintStyle}>{numberToWords(Number(newIncome.amount))} تومان</div>
-          )}
-
+          <input type="text" value={newIncome.amount ? Number(newIncome.amount).toLocaleString() : ""} onChange={(e) => { let raw = e.target.value.replace(/,/g, ""); if (raw === "" || /^\d+$/.test(raw)) setNewIncome({...newIncome, amount: raw}); }} style={{...inputStyle(1, focusedIndex), textAlign: "left", direction: "ltr"}} placeholder="مثال: 5,000,000" />
+          {newIncome.amount && newIncome.amount !== "0" && <div style={{ fontSize: "11px", color: "#10b981", marginBottom: "15px", marginTop: "-8px" }}>{numberToWords(Number(newIncome.amount))} تومان</div>}
           <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
-          <textarea
-            value={newIncome.description}
-            onChange={(e) => setNewIncome({...newIncome, description: e.target.value})}
-            style={{...inputStyle(2, focusedIndex), minHeight: "60px", resize: "vertical"}}
-            onFocus={() => setFocusedIndex(2)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="توضیحات اضافی..."
-          />
-
+          <textarea value={newIncome.description} onChange={(e) => setNewIncome({...newIncome, description: e.target.value})} style={{...inputStyle(2, focusedIndex), minHeight: "60px", resize: "vertical"}} placeholder="توضیحات اضافی..." rows="3" />
           <div style={modalBtnContainer}>
             <button onClick={() => setShowAddModal(false)} style={cancelBtnStyle}>انصراف</button>
             <button onClick={handleAddIncome} style={submitBtnStyle}>✅ ثبت درآمد</button>
@@ -482,55 +472,15 @@ const IncomeList = ({ user, onBack }) => {
         </div>
       </Modal>
 
-      {/* مودال ویرایش درآمد */}
-      <Modal 
-        isOpen={showEditModal} 
-        onClose={() => setShowEditModal(false)} 
-        title="✏️ ویرایش درآمد"
-        color="#8b5cf6"
-        size="md"
-      >
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="✏️ ویرایش درآمد" color="#8b5cf6" size="md">
         <div style={modalFormStyle}>
           <label style={labelStyle}>📌 عنوان درآمد *</label>
-          <input
-            type="text"
-            placeholder="مثال: حقوق ماهیانه"
-            value={editIncome.title}
-            onChange={(e) => setEditIncome({...editIncome, title: e.target.value})}
-            style={inputStyle(10, focusedIndex)}
-            onFocus={() => setFocusedIndex(10)}
-            onBlur={() => setFocusedIndex(null)}
-          />
-
+          <input type="text" placeholder="مثال: حقوق ماهیانه" value={editIncome.title} onChange={(e) => setEditIncome({...editIncome, title: e.target.value})} style={inputStyle(10, focusedIndex)} />
           <label style={labelStyle}>💰 مبلغ (تومان) *</label>
-          <input
-            type="text"
-            value={editIncome.amount ? Number(editIncome.amount).toLocaleString() : ""}
-            onChange={(e) => {
-              let raw = e.target.value.replace(/,/g, "");
-              if (raw === "" || /^\d+$/.test(raw)) {
-                setEditIncome({...editIncome, amount: raw});
-              }
-            }}
-            style={{...inputStyle(11, focusedIndex), textAlign: "left", direction: "ltr"}}
-            onFocus={() => setFocusedIndex(11)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="مثال: 5,000,000"
-          />
-          {editIncome.amount && editIncome.amount !== "0" && (
-            <div style={priceHintStyle}>{numberToWords(Number(editIncome.amount))} تومان</div>
-          )}
-
+          <input type="text" value={editIncome.amount ? Number(editIncome.amount).toLocaleString() : ""} onChange={(e) => { let raw = e.target.value.replace(/,/g, ""); if (raw === "" || /^\d+$/.test(raw)) setEditIncome({...editIncome, amount: raw}); }} style={{...inputStyle(11, focusedIndex), textAlign: "left", direction: "ltr"}} placeholder="مبلغ درآمد" />
+          {editIncome.amount && editIncome.amount !== "0" && <div style={{ fontSize: "11px", color: "#10b981", marginBottom: "15px", marginTop: "-8px" }}>{numberToWords(Number(editIncome.amount))} تومان</div>}
           <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
-          <textarea
-            value={editIncome.description}
-            onChange={(e) => setEditIncome({...editIncome, description: e.target.value})}
-            style={{...inputStyle(12, focusedIndex), minHeight: "60px", resize: "vertical"}}
-            onFocus={() => setFocusedIndex(12)}
-            onBlur={() => setFocusedIndex(null)}
-            placeholder="توضیحات اضافی..."
-          />
-
+          <textarea value={editIncome.description} onChange={(e) => setEditIncome({...editIncome, description: e.target.value})} style={{...inputStyle(12, focusedIndex), minHeight: "60px", resize: "vertical"}} placeholder="توضیحات" />
           <div style={modalBtnContainer}>
             <button onClick={() => setShowEditModal(false)} style={cancelBtnStyle}>انصراف</button>
             <button onClick={handleUpdateIncome} style={submitBtnPurpleStyle}>✏️ ویرایش درآمد</button>
@@ -538,18 +488,9 @@ const IncomeList = ({ user, onBack }) => {
         </div>
       </Modal>
 
-      {/* مودال تأیید حذف */}
-      <Modal 
-        isOpen={openConfirmModal} 
-        onClose={() => setOpenConfirmModal(false)} 
-        title="🗑️ تأیید حذف"
-        color="#ef4444"
-        size="sm"
-      >
+      <Modal isOpen={openConfirmModal} onClose={() => setOpenConfirmModal(false)} title="🗑️ تأیید حذف" color="#ef4444" size="sm">
         <div style={confirmModalStyle}>
-          <p style={confirmTextStyle}>
-            آیا از حذف درآمد <strong>"{incomeToDelete?.title}"</strong> مطمئن هستید؟
-          </p>
+          <p style={confirmTextStyle}>آیا از حذف درآمد <strong>"{incomeToDelete?.title}"</strong> مطمئن هستید؟</p>
           <p style={confirmWarningStyle}>این عمل غیرقابل بازگشت است.</p>
           <div style={confirmBtnContainer}>
             <button onClick={() => setOpenConfirmModal(false)} style={confirmCancelBtn}>انصراف</button>
@@ -558,102 +499,41 @@ const IncomeList = ({ user, onBack }) => {
         </div>
       </Modal>
 
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
+      <style>{`@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
     </div>
   );
 };
 
-// استایل‌های مثل ArchivedCars
-const toastStyle = {
-  position: "fixed", top: "20px", right: "20px", padding: "12px 20px", borderRadius: "12px", color: "#fff", fontSize: "14px", fontWeight: "500", zIndex: 10000, boxShadow: "0 10px 25px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: "10px"
-};
+const toastStyle = { position: "fixed", top: "20px", right: "20px", padding: "12px 20px", borderRadius: "12px", color: "#fff", fontSize: "14px", fontWeight: "500", zIndex: 10000, boxShadow: "0 10px 25px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: "10px" };
 const loadingStyle = { textAlign: "center", padding: "40px" };
 const emptyStyle = { textAlign: "center", padding: "60px", background: "#fff", borderRadius: "12px" };
 
-const headerButtonsStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "20px",
-  gap: "10px",
-  flexWrap: "wrap"
-};
-
-const backBtnStyle = {
-  background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px"
-};
-
-const addBtnStyle = {
-  background: "#10b981", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "bold"
-};
-
-const emptyAddBtnStyle = {
-  background: "#10b981", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "bold", marginTop: "20px"
-};
-
+const headerButtonsStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", gap: "10px", flexWrap: "wrap" };
+const backBtnStyle = { background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px" };
+const addBtnStyle = { background: "#10b981", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" };
+const emptyAddBtnStyle = { background: "#10b981", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "bold", marginTop: "20px" };
 const pageTitleWrapper = { flex: 1, textAlign: "center" };
 const pageTitleTextStyle = { fontSize: "20px", fontWeight: "bold", color: "#1e293b", margin: 0 };
 
 const statsContainerStyle = { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", marginBottom: "24px", maxWidth: "700px", margin: "0 auto 24px auto" };
 const statCardStyle = { background: "linear-gradient(135deg, #475569, #64748b)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" };
-const statCardStyle2 = { background: "linear-gradient(135deg, #10b981, #34d399)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" };
+const statCardStyle2 = { background: "linear-gradient(135deg, #10b981, #059669)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" };
 const statIconStyle = { fontSize: "32px" };
 const statValueStyle = { fontSize: "24px", fontWeight: "bold" };
 const statLabelStyle = { fontSize: "12px", opacity: 0.9 };
 const statWordsSmall = { fontSize: "10px", opacity: 0.8, marginTop: "5px" };
 
-const carsGridStyle = { 
-  display: "flex", 
-  flexDirection: "column", 
-  gap: "20px",
-  alignItems: "center"
-};
-
-const archiveCardStyle = { 
-  background: "#fff", 
-  borderRadius: "16px", 
-  overflow: "hidden", 
-  boxShadow: "0 4px 20px rgba(0,0,0,0.08)", 
-  transition: "all 0.3s",
-  maxWidth: "700px",
-  width: "100%"
-};
-
+const carsGridStyle = { display: "flex", flexDirection: "column", gap: "20px", alignItems: "center" };
+const archiveCardStyle = { background: "#fff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", transition: "all 0.3s", maxWidth: "700px", width: "100%" };
 const archiveHeaderStyle = { background: "linear-gradient(135deg, #10b981, #059669)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" };
 const archiveTitleStyle = { margin: 0, fontSize: "16px", fontWeight: "bold", color: "#fff" };
 const archiveBadgeStyle = { background: "#ffffff", padding: "4px 10px", borderRadius: "20px", fontSize: "11px", color: "#10b981", fontWeight: "bold" };
 const archiveContentStyle = { padding: "16px" };
 
-const editBtnStyle = {
-  flex: 1,
-  padding: "8px",
-  background: "#8b5cf6",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontSize: "12px",
-  fontWeight: "bold"
-};
-
-const deleteBtnStyle = { 
-  flex: 1,
-  padding: "8px",
-  background: "#ef4444", 
-  border: "none", 
-  borderRadius: "10px", 
-  cursor: "pointer", 
-  fontSize: "12px",
-  fontWeight: "bold"
-};
+const editBtnStyle = { flex: 1, padding: "8px", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" };
+const deleteBtnStyle = { flex: 1, padding: "8px", background: "#ef4444", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" };
 
 const modalFormStyle = { display: "flex", flexDirection: "column", gap: "12px" };
-const priceHintStyle = { fontSize: "11px", color: "#10b981", marginBottom: "15px", marginTop: "-8px", paddingRight: "4px" };
 const modalBtnContainer = { display: "flex", gap: "10px", marginTop: "10px" };
 const cancelBtnStyle = { flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" };
 const submitBtnStyle = { flex: 1, padding: "10px", background: "#10b981", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" };

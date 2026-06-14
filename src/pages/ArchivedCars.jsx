@@ -10,15 +10,21 @@ const ArchivedCars = ({ user, onBack }) => {
   const [selectedCar, setSelectedCar] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  const emailKey = user?.email?.replace(/\./g, '_').replace(/@/g, '_at_') || "";
+
   useEffect(() => {
-    if (!user) return;
-    const archiveRef = ref(db, `users/${user.uid}/archivedCars`);
+    if (!user || !emailKey) {
+      setLoading(false);
+      return;
+    }
+    const archiveRef = ref(db, `users_emails/${emailKey}/archivedCars`);
     const unsubscribe = onValue(archiveRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const carsArray = Object.entries(data).map(([id, value]) => ({
           id: id,
-          ...value
+          ...value,
+          expenses: value.expenses || []
         })).reverse();
         setArchivedCars(carsArray);
       } else {
@@ -27,7 +33,7 @@ const ArchivedCars = ({ user, onBack }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, emailKey]);
 
   const formatPrice = (price) => price?.toLocaleString() || "0";
   
@@ -70,7 +76,7 @@ const ArchivedCars = ({ user, onBack }) => {
         }
       }
       if (dateValue instanceof Date) {
-        if (isNaN(dateValue.getTime())) return "-";
+        if (isNaN(date.getTime())) return "-";
         return new Intl.DateTimeFormat('fa-IR', {
           year: 'numeric',
           month: '2-digit',
@@ -79,7 +85,6 @@ const ArchivedCars = ({ user, onBack }) => {
       }
       return "-";
     } catch (error) {
-      console.error("خطا در تبدیل تاریخ:", error);
       return "-";
     }
   };
@@ -188,11 +193,12 @@ const ArchivedCars = ({ user, onBack }) => {
     setTimeout(() => {
       const printWindow = window.open('', '_blank');
       
-      const totalExpenses = Object.values(car.expenses || {}).reduce((sum, exp) => sum + (exp.amount || 0), 0);
-      const totalCostWithPurchase = (car.purchasePrice || 0) + totalExpenses;
+      const purchasePrice = car.purchasePrice || car.originalCar?.purchasePrice || 0;
+      const totalExpenses = car.totalExpense || (car.expenses ? Object.values(car.expenses).reduce((sum, exp) => sum + (exp.amount || 0), 0) : 0);
+      const totalCostWithPurchase = car.totalCost || (purchasePrice + totalExpenses);
       
       const expensesByCategory = {};
-      if (car.expenses) {
+      if (car.expenses && Object.keys(car.expenses).length > 0) {
         Object.values(car.expenses).forEach(exp => {
           const category = exp.category || 'other';
           if (!expensesByCategory[category]) {
@@ -372,13 +378,12 @@ const ArchivedCars = ({ user, onBack }) => {
                   </div>
                 </div>
                 
-                <!-- سطر اول: مبلغ خرید - مجموع هزینه‌ها - هزینه کل -->
                 <div class="three-cols">
                   <div class="col-card">
                     <div class="col-title">💰 مبلغ خرید</div>
                     <div class="right-box">
-                      <div style="font-size:14px; font-weight:bold">${formatPrice(car.purchasePrice)} تومان</div>
-                      <div class="amount-word">${numberToWords(car.purchasePrice)} تومان</div>
+                      <div style="font-size:14px; font-weight:bold">${formatPrice(purchasePrice)} تومان</div>
+                      <div class="amount-word">${numberToWords(purchasePrice)} تومان</div>
                     </div>
                   </div>
                   <div class="col-card">
@@ -389,7 +394,7 @@ const ArchivedCars = ({ user, onBack }) => {
                     </div>
                   </div>
                   <div class="col-card">
-                    <div class="col-title">💰 هزینه کل </div>
+                    <div class="col-title">💰 هزینه کل</div>
                     <div style="background:#ede9fe; border-radius:10px; padding:6px 10px; text-align:left">
                       <div style="font-weight:bold; color:#7c3aed; font-size:14px">${formatPrice(totalCostWithPurchase)} تومان</div>
                       <div class="amount-word">${numberToWords(totalCostWithPurchase)} تومان</div>
@@ -397,7 +402,6 @@ const ArchivedCars = ({ user, onBack }) => {
                   </div>
                 </div>
                 
-                <!-- سطر دوم: قیمت فروش - سود نهایی -->
                 <div class="three-cols">
                   <div class="col-card">
                     <div class="col-title">💵 قیمت فروش</div>
@@ -415,9 +419,7 @@ const ArchivedCars = ({ user, onBack }) => {
                       <div class="amount-word">${numberToWords(Math.abs(car.profit))} تومان</div>
                     </div>
                   </div>
-                  <div class="col-card">
-                    <!-- ستون خالی -->
-                  </div>
+                  <div class="col-card"></div>
                 </div>
                 
                 <div class="section">
@@ -515,8 +517,44 @@ const ArchivedCars = ({ user, onBack }) => {
     margin: "0 auto 6px auto"
   };
 
+  // استایل بارگذاری
+  const loadingStyle = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "60vh",
+    flexDirection: "column",
+    gap: "16px"
+  };
+
+  const loadingSpinner = {
+    width: "50px",
+    height: "50px",
+    border: "4px solid #e2e8f0",
+    borderTop: "4px solid #f59e0b",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite"
+  };
+
+  const loadingText = {
+    fontSize: "14px",
+    color: "#64748b",
+    fontWeight: "500"
+  };
+
   if (loading) {
-    return <div style={loadingStyle}>در حال بارگذاری...</div>;
+    return (
+      <div style={loadingStyle}>
+        <div style={loadingSpinner}></div>
+        <p style={loadingText}>در حال بارگذاری...</p>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
@@ -569,11 +607,12 @@ const ArchivedCars = ({ user, onBack }) => {
       ) : (
         <div style={carsGridStyle}>
           {filteredCars.map((car) => {
-            const totalExpenses = Object.values(car.expenses || {}).reduce((sum, exp) => sum + (exp.amount || 0), 0);
-            const totalCostWithPurchase = (car.purchasePrice || 0) + totalExpenses;
+            const purchasePrice = car.purchasePrice || car.originalCar?.purchasePrice || 0;
+            const totalExpenses = car.totalExpense || (car.expenses ? Object.values(car.expenses).reduce((sum, exp) => sum + (exp.amount || 0), 0) : 0);
+            const totalCostWithPurchase = car.totalCost || (purchasePrice + totalExpenses);
             
             const expensesByCategory = {};
-            if (car.expenses) {
+            if (car.expenses && Object.keys(car.expenses).length > 0) {
               Object.values(car.expenses).forEach(exp => {
                 const cat = exp.category || 'other';
                 if (!expensesByCategory[cat]) {
@@ -603,13 +642,12 @@ const ArchivedCars = ({ user, onBack }) => {
                     </div>
                   </div>
 
-                  {/* سطر اول: مبلغ خرید - مجموع هزینه‌ها - هزینه کل */}
                   <div style={threeColumnsStyle}>
                     <div style={columnCardStyle}>
                       <div style={columnTitleStyle(true)}>💰 مبلغ خرید</div>
                       <div style={rightBoxStyle('purchase')}>
-                        <div style={{ fontWeight: "bold", fontSize: "14px" }}>{formatPrice(car.purchasePrice)} تومان</div>
-                        <div style={wordsStyle}>{numberToWords(car.purchasePrice)} تومان</div>
+                        <div style={{ fontWeight: "bold", fontSize: "14px" }}>{formatPrice(purchasePrice)} تومان</div>
+                        <div style={wordsStyle}>{numberToWords(purchasePrice)} تومان</div>
                       </div>
                     </div>
                     
@@ -630,7 +668,6 @@ const ArchivedCars = ({ user, onBack }) => {
                     </div>
                   </div>
 
-                  {/* سطر دوم: قیمت فروش - سود نهایی */}
                   <div style={threeColumnsStyle}>
                     <div style={columnCardStyle}>
                       <div style={columnTitleStyle(true)}>💵 قیمت فروش</div>
@@ -650,9 +687,7 @@ const ArchivedCars = ({ user, onBack }) => {
                       </div>
                     </div>
                     
-                    <div style={columnCardStyle}>
-                      {/* ستون سوم خالی */}
-                    </div>
+                    <div style={columnCardStyle}></div>
                   </div>
 
                   {Object.keys(expensesByCategory).length > 0 && (
@@ -719,13 +754,7 @@ const headerButtonsStyle = {
 };
 
 const backBtnStyle = {
-  background: "#64748b",
-  color: "#fff",
-  border: "none",
-  padding: "8px 20px",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontSize: "13px"
+  background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px"
 };
 
 const pageTitleWrapper = { flex: 1, textAlign: "center" };

@@ -12,6 +12,8 @@ import IncomeList from "./pages/IncomeList";
 import DealershipList from "./pages/DealershipList";
 import BackupManager from "./pages/BackupManager";
 import SellCarModal from "./pages/SellCarModal";
+import CustomerList from "./pages/CustomerList";
+import CustomerForm from "./pages/CustomerForm";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -62,7 +64,7 @@ function App() {
   };
 
   const handleBackFromAddCar = () => {
-    setCurrentPage("dashboard");  // ← برگشت به داشبورد
+    setCurrentPage("dashboard");
     setEditingCar(null);
   };
 
@@ -204,6 +206,21 @@ function App() {
             <span style={menuIcon}>🏢</span>
           </button>
 
+          {/* دکمه مشتریان */}
+          <button
+            onClick={() => setCurrentPage("customers")}
+            style={{
+              ...menuBtnStyle,
+              backgroundColor: currentPage === "customers" ? "#f59e0b" : "#334155",
+              justifyContent: sidebarOpen ? "flex-start" : "center",
+              padding: sidebarOpen ? "8px 12px" : "8px"
+            }}
+            title="مشتریان"
+          >
+            {sidebarOpen && <span style={menuText}>👥 مشتریان</span>}
+            <span style={menuIcon}>👥</span>
+          </button>
+
           {/* دکمه بکاپ */}
           <button
             onClick={() => setCurrentPage("backup")}
@@ -278,6 +295,20 @@ function App() {
           <DealershipList
             user={user}
             onBack={() => setCurrentPage("dashboard")}
+          />
+        )}
+        {currentPage === "customers" && (
+          <CustomerList
+            user={user}
+            onBack={() => setCurrentPage("dashboard")}
+            onAddCustomer={() => setCurrentPage("addCustomer")}
+          />
+        )}
+        {currentPage === "addCustomer" && (
+          <CustomerForm
+            user={user}
+            onSaved={() => setCurrentPage("customers")}
+            onCancel={() => setCurrentPage("customers")}
           />
         )}
         {currentPage === "backup" && (
