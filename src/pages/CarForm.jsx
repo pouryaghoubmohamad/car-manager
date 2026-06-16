@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { db } from "../firebaseConfig";
 import { ref, push, set, update } from "firebase/database";
 
-const CarForm = ({ user, onSaved, onCancel, editingCar }) => {
+const CarForm = ({ user, onBack, onSaved, editingCar }) => {
   const [focusedIndex, setFocusedIndex] = useState(null);
   const [carName, setCarName] = useState("");
   const [buyerName, setBuyerName] = useState("");
   const [price, setPrice] = useState("");
+  const [productionYear, setProductionYear] = useState("");
+  const [color, setColor] = useState("");
   const [description, setDescription] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [insuranceExpiry, setInsuranceExpiry] = useState("");
@@ -28,6 +30,8 @@ const CarForm = ({ user, onSaved, onCancel, editingCar }) => {
       setCarName(editingCar.carName || "");
       setBuyerName(editingCar.buyerName || "");
       setPrice(editingCar.price?.toString() || "");
+      setProductionYear(editingCar.productionYear || "");
+      setColor(editingCar.color || "");
       setDescription(editingCar.description || "");
       setPurchaseDate(editingCar.purchaseDate || "");
       setInsuranceExpiry(editingCar.insuranceExpiry || "");
@@ -97,6 +101,8 @@ const CarForm = ({ user, onSaved, onCancel, editingCar }) => {
       carName: carName.trim(),
       buyerName: buyerName.trim(),
       price: Number(price),
+      productionYear: productionYear.trim() || "",
+      color: color.trim() || "",
       description: description.trim() || "",
       purchaseDate: purchaseDate || null,
       insuranceExpiry: insuranceExpiry || null,
@@ -120,6 +126,7 @@ const CarForm = ({ user, onSaved, onCancel, editingCar }) => {
       }
       
       setTimeout(() => {
+        if (onBack) onBack();
         if (onSaved) onSaved();
       }, 1500);
     } catch (error) {
@@ -197,38 +204,54 @@ const CarForm = ({ user, onSaved, onCancel, editingCar }) => {
           </div>
         </div>
 
-        <label style={labelStyle}>قیمت (تومان) {!isEditing && "*"}</label>
-        <input type="text" value={price ? price.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""} onChange={handlePriceChange} style={priceInputStyle(2)} onFocus={() => setFocusedIndex(2)} onBlur={() => setFocusedIndex(null)} dir="ltr" placeholder="مثال: 250000000" disabled={loading} />
-        <div style={priceHintStyle}>{price ? numberToPersianWords(price) : "مبلغ را وارد کنید"}</div>
-
         <div style={rowStyle}>
           <div style={{ width: "100%" }}>
-            <label style={labelStyle}>تاریخ خرید (مثال: 1403/01/15)</label>
-            <input type="text" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} style={inputStyle(3)} onFocus={() => setFocusedIndex(3)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
+            <label style={labelStyle}>قیمت (تومان) {!isEditing && "*"}</label>
+            <input type="text" value={price ? price.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""} onChange={handlePriceChange} style={priceInputStyle(2)} onFocus={() => setFocusedIndex(2)} onBlur={() => setFocusedIndex(null)} dir="ltr" placeholder="مثال: 250000000" disabled={loading} />
+            <div style={priceHintStyle}>{price ? numberToPersianWords(price) : "مبلغ را وارد کنید"}</div>
           </div>
           <div style={{ width: "100%" }}>
-            <label style={labelStyle}>تاریخ انقضای بیمه (مثال: 1403/01/15)</label>
-            <input type="text" value={insuranceExpiry} onChange={(e) => setInsuranceExpiry(e.target.value)} style={inputStyle(4)} onFocus={() => setFocusedIndex(4)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
+            <label style={labelStyle}>سال تولید</label>
+            <input type="text" value={productionYear} onChange={(e) => setProductionYear(e.target.value)} style={inputStyle(3)} onFocus={() => setFocusedIndex(3)} onBlur={() => setFocusedIndex(null)} placeholder="مثال: 1400" disabled={loading} />
           </div>
         </div>
 
         <div style={rowStyle}>
           <div style={{ width: "100%" }}>
-            <label style={labelStyle}>تاریخ انقضای وکالت (مثال: 1403/01/15)</label>
-            <input type="text" value={attorneyExpiry} onChange={(e) => setAttorneyExpiry(e.target.value)} style={inputStyle(5)} onFocus={() => setFocusedIndex(5)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
+            <label style={labelStyle}>رنگ خودرو</label>
+            <input type="text" value={color} onChange={(e) => setColor(e.target.value)} style={inputStyle(4)} onFocus={() => setFocusedIndex(4)} onBlur={() => setFocusedIndex(null)} placeholder="مثال: مشکی - سفید - نقره‌ای" disabled={loading} />
           </div>
           <div style={{ width: "100%" }}>
-            <label style={labelStyle}>تاریخ معاینه فنی (مثال: 1403/01/15)</label>
-            <input type="text" value={technicalInspectionDate} onChange={(e) => setTechnicalInspectionDate(e.target.value)} style={inputStyle(6)} onFocus={() => setFocusedIndex(6)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
+            <label style={labelStyle}>تاریخ خرید (مثال: 1403/01/15)</label>
+            <input type="text" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} style={inputStyle(5)} onFocus={() => setFocusedIndex(5)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
           </div>
+        </div>
+
+        <div style={rowStyle}>
+          <div style={{ width: "100%" }}>
+            <label style={labelStyle}>تاریخ انقضای بیمه (مثال: 1403/01/15)</label>
+            <input type="text" value={insuranceExpiry} onChange={(e) => setInsuranceExpiry(e.target.value)} style={inputStyle(6)} onFocus={() => setFocusedIndex(6)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
+          </div>
+          <div style={{ width: "100%" }}>
+            <label style={labelStyle}>تاریخ انقضای وکالت (مثال: 1403/01/15)</label>
+            <input type="text" value={attorneyExpiry} onChange={(e) => setAttorneyExpiry(e.target.value)} style={inputStyle(7)} onFocus={() => setFocusedIndex(7)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
+          </div>
+        </div>
+
+        <div style={rowStyle}>
+          <div style={{ width: "100%" }}>
+            <label style={labelStyle}>تاریخ معاینه فنی (مثال: 1403/01/15)</label>
+            <input type="text" value={technicalInspectionDate} onChange={(e) => setTechnicalInspectionDate(e.target.value)} style={inputStyle(8)} onFocus={() => setFocusedIndex(8)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
+          </div>
+          <div style={{ width: "100%" }}></div>
         </div>
 
         <label style={labelStyle}>توضیحات</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={textareaStyle(7)} onFocus={() => setFocusedIndex(7)} onBlur={() => setFocusedIndex(null)} placeholder="توضیحات اضافی (اختیاری)" rows="3" disabled={loading} />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={textareaStyle(9)} onFocus={() => setFocusedIndex(9)} onBlur={() => setFocusedIndex(null)} placeholder="توضیحات اضافی (اختیاری)" rows="3" disabled={loading} />
       </div>
 
       <div style={buttonContainerStyle}>
-        <button onClick={onCancel} style={{...btnStyle, backgroundColor: "#64748b"}} disabled={loading}>✕ انصراف</button>
+        <button onClick={onBack} style={{...btnStyle, backgroundColor: "#64748b"}} disabled={loading}>✕ انصراف</button>
         <button onClick={handleSubmit} style={{...btnStyle, backgroundColor: isEditing ? "#3b82f6" : "#16a34a"}} disabled={loading}>{loading ? "⏳ در حال ذخیره..." : (isEditing ? "✏️ ویرایش خودرو" : "✓ ثبت خودرو")}</button>
       </div>
 

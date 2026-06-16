@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebaseConfig";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, update, remove, set } from "firebase/database";
+import Modal from "../Modal";
 
-const ArchivedCars = ({ user, onBack }) => {
+const ArchivedCars = ({ user, onBack, onRestoreSuccess }) => {
   const [archivedCars, setArchivedCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [focusedIndex, setFocusedIndex] = useState(null);
   const [selectedCar, setSelectedCar] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [carToRestore, setCarToRestore] = useState(null);
 
   const emailKey = user?.email?.replace(/\./g, '_').replace(/@/g, '_at_') || "";
+
+  const showToast = (message, type) => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     if (!user || !emailKey) {
@@ -21,11 +28,14 @@ const ArchivedCars = ({ user, onBack }) => {
     const unsubscribe = onValue(archiveRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const carsArray = Object.entries(data).map(([id, value]) => ({
-          id: id,
-          ...value,
-          expenses: value.expenses || []
-        })).reverse();
+        const carsArray = Object.entries(data)
+          .filter(([_, value]) => !value.deleted)
+          .map(([id, value]) => ({
+            id: id,
+            ...value,
+            expenses: value.expenses || []
+          }))
+          .reverse();
         setArchivedCars(carsArray);
       } else {
         setArchivedCars([]);
@@ -75,14 +85,6 @@ const ArchivedCars = ({ user, onBack }) => {
           return dateValue;
         }
       }
-      if (dateValue instanceof Date) {
-        if (isNaN(date.getTime())) return "-";
-        return new Intl.DateTimeFormat('fa-IR', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }).format(dateValue);
-      }
       return "-";
     } catch (error) {
       return "-";
@@ -121,7 +123,6 @@ const ArchivedCars = ({ user, onBack }) => {
         words.push(convertChunk(chunks[i]) + " " + thousands[chunks.length - 1 - i]);
       }
     }
-    
     return words.join(" و ");
   };
 
@@ -137,6 +138,17 @@ const ArchivedCars = ({ user, onBack }) => {
       other: { label: "سایر هزینه‌ها", icon: "📦", color: "#64748b" },
     };
     return categories[category] || { label: "سایر", icon: "📦", color: "#64748b" };
+  };
+
+  const calculateProfit = (car) => {
+    const sellingPrice = Number(car.sellingPrice) || 0;
+    let purchasePrice = Number(car.purchasePrice) || 0;
+    if (purchasePrice === 0 && car.originalCar?.purchasePrice) {
+      purchasePrice = Number(car.originalCar.purchasePrice) || 0;
+    }
+    const totalExpenses = car.totalExpense || (car.expenses ? Object.values(car.expenses).reduce((sum, exp) => sum + (exp.amount || 0), 0) : 0);
+    const totalCost = purchasePrice + totalExpenses;
+    return sellingPrice - totalCost;
   };
 
   const rightBoxStyle = (type) => {
@@ -162,323 +174,647 @@ const ArchivedCars = ({ user, onBack }) => {
     }
   };
 
-  const threeColumnsStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "8px",
-    marginBottom: "12px"
-  };
 
-  const columnCardStyle = {
-    background: "#f8fafc",
-    borderRadius: "12px",
-    padding: "8px",
-    textAlign: "center"
-  };
+// ========== بخش چاپ صورتحساب با دیزاین جدید ==========
 
-  const columnTitleStyle = (isProfit = true) => ({
-    fontSize: "11px",
-    fontWeight: "bold",
-    color: "#64748b",
-    marginBottom: "6px",
-    paddingBottom: "4px",
-    borderBottom: `2px solid ${isProfit ? "#f59e0b" : "#ef4444"}`
-  });
-
-  const wordsStyle = { fontSize: "9px", color: "#64748b", marginTop: "3px", textAlign: "left" };
-  const tinyWordsStyle = { fontSize: "8px", color: "#94a3b8", marginTop: "2px", textAlign: "left" };
-
-  const handlePrint = (car) => {
-    setSelectedCar(car);
-    setTimeout(() => {
-      const printWindow = window.open('', '_blank');
-      
-      const purchasePrice = car.purchasePrice || car.originalCar?.purchasePrice || 0;
-      const totalExpenses = car.totalExpense || (car.expenses ? Object.values(car.expenses).reduce((sum, exp) => sum + (exp.amount || 0), 0) : 0);
-      const totalCostWithPurchase = car.totalCost || (purchasePrice + totalExpenses);
-      
-      const expensesByCategory = {};
-      if (car.expenses && Object.keys(car.expenses).length > 0) {
-        Object.values(car.expenses).forEach(exp => {
-          const category = exp.category || 'other';
-          if (!expensesByCategory[category]) {
-            expensesByCategory[category] = [];
-          }
-          expensesByCategory[category].push(exp);
-        });
-      }
-      
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>صورتحساب فروش خودرو ${car.originalCar?.carName}</title>
-            <meta charset="UTF-8">
-            <style>
-              @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap');
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: 'Vazirmatn', 'Vazir', 'IRANSans', Tahoma, sans-serif;
-                direction: rtl;
-                padding: 20px;
-                margin: 0;
-                background: #f0f4f8;
-              }
-              .invoice {
-                max-width: 800px;
-                margin: 0 auto;
-                background: white;
-                border-radius: 24px;
-                overflow: hidden;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-              }
-              .header {
-                background: linear-gradient(135deg, #1e293b, #334155);
-                padding: 20px;
-                text-align: center;
-                color: white;
-              }
-              .header h1 { font-size: 22px; margin-bottom: 6px; }
-              .header p { font-size: 12px; opacity: 0.8; }
+const handlePrint = (car) => {
+  setSelectedCar(car);
+  setTimeout(() => {
+    const printWindow = window.open('', '_blank');
+    
+    const purchasePrice = Number(car.purchasePrice) || Number(car.originalCar?.purchasePrice) || 0;
+    const totalExpenses = car.totalExpense || (car.expenses ? Object.values(car.expenses).reduce((sum, exp) => sum + (exp.amount || 0), 0) : 0);
+    const totalCost = purchasePrice + totalExpenses;
+    const profitValue = (Number(car.sellingPrice) || 0) - totalCost;
+    
+    const carInfo = car.originalCar || {};
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>صورتحساب فروش خودرو ${carInfo.carName || car.originalCar?.carName}</title>
+          <meta charset="UTF-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap');
+            * { 
+              margin: 0; 
+              padding: 0; 
+              box-sizing: border-box; 
+            }
+            body {
+              font-family: 'Vazirmatn', 'Vazir', 'IRANSans', Tahoma, sans-serif;
+              direction: rtl;
+              padding: 30px;
+              margin: 0;
+              background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+              min-height: 100vh;
+            }
+            .invoice {
+              max-width: 900px;
+              margin: 0 auto;
+              background: white;
+              border-radius: 32px;
+              overflow: hidden;
+              box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+              animation: fadeIn 0.5s ease-out;
+            }
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(20px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            
+            /* هدر اصلی */
+            .header {
+              background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+              padding: 30px 40px;
+              text-align: center;
+              color: white;
+              position: relative;
+              overflow: hidden;
+            }
+            .header::before {
+              content: '';
+              position: absolute;
+              top: -50%;
+              right: -50%;
+              width: 200%;
+              height: 200%;
+              background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
+              animation: shimmer 10s infinite linear;
+            }
+            @keyframes shimmer {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            .header-content {
+              position: relative;
+              z-index: 1;
+            }
+            .header h1 {
+              font-size: 28px;
+              font-weight: 900;
+              margin-bottom: 8px;
+              letter-spacing: 2px;
+              background: linear-gradient(135deg, #fbbf24, #f59e0b);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+            }
+            .header .sub-info {
+              display: flex;
+              justify-content: center;
+              gap: 30px;
+              margin-top: 12px;
+              font-size: 13px;
+              color: #94a3b8;
+            }
+            .header .sub-info span {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            }
+            .header .sub-info .badge {
+              background: rgba(251, 191, 36, 0.2);
+              padding: 4px 16px;
+              border-radius: 30px;
+              color: #fbbf24;
+              font-weight: 700;
+              font-size: 12px;
+              border: 1px solid rgba(251, 191, 36, 0.3);
+            }
+            
+            /* محتوای اصلی */
+            .content { 
+              padding: 30px 35px; 
+            }
+            
+            /* بخش‌های اطلاعاتی */
+            .section {
+              margin-bottom: 24px;
+              border: 1px solid #e2e8f0;
+              border-radius: 20px;
+              overflow: hidden;
+              transition: all 0.3s;
+              background: white;
+            }
+            .section:hover {
+              border-color: #fbbf24;
+              box-shadow: 0 4px 15px rgba(251, 191, 36, 0.15);
+            }
+            .section-title {
+              background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+              padding: 14px 20px;
+              font-weight: 700;
+              color: #0f172a;
+              border-bottom: 2px solid #e2e8f0;
+              font-size: 14px;
+              display: flex;
+              align-items: center;
+              gap: 10px;
+            }
+            .section-title .icon {
+              font-size: 18px;
+            }
+            
+            /* گرید اطلاعات */
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 12px;
+              padding: 18px 20px;
+            }
+            .info-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 8px 0;
+              border-bottom: 1px dashed #e2e8f0;
+              font-size: 13px;
+            }
+            .info-item:last-child {
+              border-bottom: none;
+            }
+            .info-label {
+              font-weight: 600;
+              color: #64748b;
+              font-size: 12px;
+            }
+            
+            /* باکس‌های اطلاعات */
+            .info-box {
+              background: #f8fafc;
+              border-radius: 12px;
+              padding: 8px 14px;
+              text-align: left;
+              font-weight: 500;
+              font-size: 13px;
+              min-width: 120px;
+            }
+            .info-box-blue {
+              background: #e0f2fe;
+              color: #0284c7;
+              font-weight: 700;
+            }
+            .info-box-date {
+              background: #dbeafe;
+              color: #1e40af;
+            }
+            .info-box-green {
+              background: #dcfce7;
+              color: #16a34a;
+            }
+            .info-box-yellow {
+              background: #fef3c7;
+              color: #b45309;
+            }
+            
+            /* ===== هزینه‌های ثبت شده (اول) ===== */
+            .expense-group {
+              background: #f8fafc;
+              margin-bottom: 12px;
+              border-radius: 14px;
+              overflow: hidden;
+              border: 1px solid #e2e8f0;
+            }
+            .expense-group-header {
+              padding: 10px 16px;
+              color: white;
+              font-weight: 700;
+              font-size: 13px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .expense-group-header .count {
+              font-size: 11px;
+              opacity: 0.9;
+              font-weight: 400;
+            }
+            .expense-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 10px 16px;
+              border-bottom: 1px solid #e2e8f0;
+              font-size: 13px;
+              transition: background 0.2s;
+            }
+            .expense-item:hover {
+              background: white;
+            }
+            .expense-item:last-child {
+              border-bottom: none;
+            }
+            .expense-item .desc {
+              font-weight: 500;
+              color: #1e293b;
+            }
+            .expense-item .amount {
+              font-weight: 700;
+              color: #0f172a;
+            }
+            .expense-item .words {
+              font-size: 9px;
+              color: #94a3b8;
+              margin-right: 8px;
+            }
+            
+            /* ===== باکس‌های ۵ گانه (بعد از هزینه‌ها) ===== */
+            .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              gap: 12px;
+              margin-top: 24px;
+            }
+            .stat-box {
+              background: white;
+              border-radius: 16px;
+              padding: 16px 12px;
+              text-align: center;
+              border: 2px solid #e2e8f0;
+              transition: all 0.3s ease;
+              position: relative;
+              overflow: hidden;
+            }
+            .stat-box::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+            }
+            .stat-box:hover {
+              transform: translateY(-4px);
+              box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            }
+            
+            /* رنگ‌های باکس‌ها */
+            .stat-box.purchase::before { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+            .stat-box.purchase { border-color: #93c5fd; background: #f0f9ff; }
+            
+            .stat-box.expenses::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+            .stat-box.expenses { border-color: #fcd34d; background: #fffbeb; }
+            
+            .stat-box.total-cost::before { background: linear-gradient(90deg, #8b5cf6, #7c3aed); }
+            .stat-box.total-cost { border-color: #c4b5fd; background: #f5f3ff; }
+            
+            .stat-box.selling::before { background: linear-gradient(90deg, #10b981, #059669); }
+            .stat-box.selling { border-color: #6ee7b7; background: #ecfdf5; }
+            
+            .stat-box.profit::before { background: linear-gradient(90deg, #f43f5e, #e11d48); }
+            .stat-box.profit { border-color: #fda4af; background: #fff1f2; }
+            .stat-box.profit.positive::before { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+            .stat-box.profit.positive { border-color: #fde68a; background: #fffbeb; }
+            
+            .stat-box .stat-icon {
+              font-size: 28px;
+              display: block;
+              margin-bottom: 6px;
+            }
+            .stat-box .stat-label {
+              font-size: 11px;
+              color: #64748b;
+              font-weight: 600;
+              margin-bottom: 4px;
+            }
+            .stat-box .stat-value {
+              font-size: 18px;
+              font-weight: 900;
+              color: #0f172a;
+              direction: ltr;
+            }
+            .stat-box .stat-value.purchase-color { color: #2563eb; }
+            .stat-box .stat-value.expenses-color { color: #d97706; }
+            .stat-box .stat-value.total-color { color: #7c3aed; }
+            .stat-box .stat-value.selling-color { color: #059669; }
+            .stat-box .stat-value.profit-color { color: #dc2626; }
+            .stat-box .stat-value.profit-color.positive { color: #16a34a; }
+            
+            .stat-box .stat-words {
+              font-size: 9px;
+              color: #94a3b8;
+              margin-top: 4px;
+              direction: rtl;
+              font-weight: 400;
+              line-height: 1.4;
+            }
+            
+            /* دکمه‌ها */
+            .print-actions {
+              display: flex;
+              gap: 14px;
+              justify-content: center;
+              padding: 24px 30px;
+              border-top: 2px solid #e2e8f0;
+              background: #f8fafc;
+              margin-top: 24px;
+            }
+            .print-btn, .back-btn {
+              padding: 12px 32px;
+              border: none;
+              border-radius: 14px;
+              cursor: pointer;
+              font-size: 15px;
+              font-weight: 700;
+              font-family: inherit;
+              transition: all 0.3s ease;
+              display: flex;
+              align-items: center;
+              gap: 10px;
+            }
+            .print-btn {
+              background: linear-gradient(135deg, #fbbf24, #f59e0b);
+              color: #0f172a;
+              box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+            }
+            .print-btn:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);
+            }
+            .back-btn {
+              background: #64748b;
+              color: white;
+            }
+            .back-btn:hover {
+              background: #475569;
+              transform: translateY(-2px);
+            }
+            
+            /* ریسپانسیو */
+            @media (max-width: 768px) {
+              body { padding: 15px; }
               .content { padding: 20px; }
-              .section {
-                margin-bottom: 20px;
-                border: 1px solid #e2e8f0;
-                border-radius: 16px;
-                overflow: hidden;
+              .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
               }
-              .section-title {
-                background: #f8fafc;
-                padding: 10px 16px;
-                font-weight: bold;
-                color: #1e293b;
-                border-bottom: 2px solid #e2e8f0;
-                font-size: 13px;
+              .stats-grid .stat-box:nth-child(4),
+              .stats-grid .stat-box:nth-child(5) {
+                grid-column: span 1.5;
               }
               .info-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 12px;
-                padding: 16px;
+                grid-template-columns: 1fr;
               }
-              .info-item {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                padding: 6px 0;
-                border-bottom: 1px dashed #e2e8f0;
-                font-size: 12px;
-              }
-              .info-label { font-weight: 600; color: #64748b; }
-              .right-box {
-                background: #f1f5f9;
-                border-radius: 10px;
-                padding: 6px 10px;
-                text-align: left;
-                font-size: 12px;
-              }
-              .right-box-blue {
-                background: #e0f2fe;
-                border-radius: 10px;
-                padding: 6px 10px;
-                text-align: left;
-                font-weight: bold;
-                color: #0284c7;
-                font-size: 12px;
-              }
-              .right-box-date {
-                background: #dbeafe;
-                border-radius: 10px;
-                padding: 6px 10px;
-                text-align: left;
-                color: #1e40af;
-                font-weight: 500;
-                font-size: 12px;
-              }
-              .amount-word {
-                font-size: 10px;
-                color: #10b981;
-                margin-top: 3px;
-                text-align: left;
-              }
-              .three-cols {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
+              .header .sub-info {
+                flex-direction: column;
                 gap: 8px;
-                margin-bottom: 16px;
+                align-items: center;
               }
-              .col-card {
-                background: #f8fafc;
-                border-radius: 12px;
-                padding: 8px;
-                text-align: center;
+            }
+            @media (max-width: 500px) {
+              .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
               }
-              .col-title {
-                font-size: 11px;
-                font-weight: bold;
-                color: #64748b;
-                margin-bottom: 6px;
-                padding-bottom: 4px;
-                border-bottom: 2px solid #f59e0b;
+              .stats-grid .stat-box:nth-child(5) {
+                grid-column: span 2;
               }
-              .print-buttons {
-                display: flex;
-                gap: 12px;
-                justify-content: center;
-                padding: 20px;
-                border-top: 1px solid #e2e8f0;
-                background: #f8fafc;
+            }
+            
+            @media print {
+              body { 
+                padding: 0; 
+                background: white;
               }
-              .print-btn, .back-btn {
-                padding: 10px 24px;
-                border: none;
-                border-radius: 10px;
-                cursor: pointer;
-                font-size: 14px;
-                font-weight: bold;
-                font-family: inherit;
-                transition: all 0.2s;
+              .invoice {
+                border-radius: 0;
+                box-shadow: none;
               }
-              .print-btn {
-                background: #f59e0b;
-                color: white;
+              .print-actions { 
+                display: none; 
               }
-              .print-btn:hover {
-                background: #d97706;
+              .stat-box {
+                border: 1px solid #e2e8f0 !important;
+                break-inside: avoid;
               }
-              .back-btn {
-                background: #64748b;
-                color: white;
+              .section {
+                break-inside: avoid;
               }
-              .back-btn:hover {
-                background: #475569;
+              .stat-box:hover {
+                transform: none !important;
+                box-shadow: none !important;
               }
-              @media print {
-                body { padding: 0; background: white; }
-                .print-buttons { display: none; }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="invoice">
-              <div class="header">
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice">
+            <!-- هدر -->
+            <div class="header">
+              <div class="header-content">
                 <h1>🚗 صورتحساب فروش خودرو</h1>
-                <p>تاریخ: ${safeConvertToPersianDate(car.soldAt)}</p>
-                <p>شماره فاکتور: ${car.id.slice(-8)}</p>
-              </div>
-              
-              <div class="content">
-                <div class="section">
-                  <div class="section-title">📋 اطلاعات خودرو</div>
-                  <div class="info-grid">
-                    <div class="info-item"><span class="info-label">نام خودرو:</span><div class="right-box">${car.originalCar?.carName}</div></div>
-                    <div class="info-item"><span class="info-label">خریدار قبلی:</span><div class="right-box-blue">${car.originalCar?.buyerName}</div></div>
-                    <div class="info-item"><span class="info-label">خریدار جدید:</span><div class="right-box-blue" style="background:#fef3c7; color:#b45309">${car.newBuyerName}</div></div>
-                    <div class="info-item"><span class="info-label">تاریخ خرید:</span><div class="right-box-date">${safeConvertToPersianDate(car.originalCar?.purchaseDate)}</div></div>
-                    <div class="info-item"><span class="info-label">تاریخ فروش:</span><div class="right-box-date">${safeConvertToPersianDate(car.sellDate)}</div></div>
-                  </div>
+                <div class="sub-info">
+                  <span>📅 تاریخ: ${safeConvertToPersianDate(car.soldAt)}</span>
+                  <span>🔢 شماره فاکتور: ${car.id?.slice(-8) || "------"}</span>
+                  <span class="badge">✅ فروش نهایی</span>
                 </div>
-                
-                <div class="three-cols">
-                  <div class="col-card">
-                    <div class="col-title">💰 مبلغ خرید</div>
-                    <div class="right-box">
-                      <div style="font-size:14px; font-weight:bold">${formatPrice(purchasePrice)} تومان</div>
-                      <div class="amount-word">${numberToWords(purchasePrice)} تومان</div>
-                    </div>
-                  </div>
-                  <div class="col-card">
-                    <div class="col-title">🔧 مجموع هزینه‌ها</div>
-                    <div style="background:#fef3c7; border-radius:10px; padding:6px 10px; text-align:left">
-                      <div style="font-weight:bold; color:#f59e0b; font-size:14px">${formatPrice(totalExpenses)} تومان</div>
-                      <div class="amount-word">${numberToWords(totalExpenses)} تومان</div>
-                    </div>
-                  </div>
-                  <div class="col-card">
-                    <div class="col-title">💰 هزینه کل</div>
-                    <div style="background:#ede9fe; border-radius:10px; padding:6px 10px; text-align:left">
-                      <div style="font-weight:bold; color:#7c3aed; font-size:14px">${formatPrice(totalCostWithPurchase)} تومان</div>
-                      <div class="amount-word">${numberToWords(totalCostWithPurchase)} تومان</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="three-cols">
-                  <div class="col-card">
-                    <div class="col-title">💵 قیمت فروش</div>
-                    <div style="background:#dcfce7; border-radius:10px; padding:6px 10px; text-align:left">
-                      <div style="color:#16a34a; font-weight:bold; font-size:14px">${formatPrice(car.sellingPrice)} تومان</div>
-                      <div class="amount-word">${numberToWords(car.sellingPrice)} تومان</div>
-                    </div>
-                  </div>
-                  <div class="col-card">
-                    <div class="col-title" style="border-bottom-color: ${car.profit >= 0 ? '#f59e0b' : '#ef4444'}">📊 سود نهایی</div>
-                    <div style="background: ${car.profit >= 0 ? '#fef3c7' : '#fee2e2'}; border-radius: 10px; padding: 6px 10px; text-align: left;">
-                      <div style="font-weight:bold; color: ${car.profit >= 0 ? '#16a34a' : '#dc2626'}; font-size:14px">
-                        ${formatPrice(Math.abs(car.profit))} تومان ${car.profit < 0 ? '(زیان)' : ''}
-                      </div>
-                      <div class="amount-word">${numberToWords(Math.abs(car.profit))} تومان</div>
-                    </div>
-                  </div>
-                  <div class="col-card"></div>
-                </div>
-                
-                <div class="section">
-                  <div class="section-title">🔧 هزینه‌های ثبت شده</div>
-                  <div style="padding: 16px;">
-      `);
-      
-      if (car.expenses && Object.keys(car.expenses).length > 0) {
-        const grouped = {};
-        Object.values(car.expenses).forEach(exp => {
-          const cat = exp.category || 'other';
-          if (!grouped[cat]) grouped[cat] = [];
-          grouped[cat].push(exp);
-        });
-        
-        for (const [cat, exps] of Object.entries(grouped)) {
-          const catInfo = getCategoryLabel(cat);
-          const catTotal = exps.reduce((s, e) => s + (e.amount || 0), 0);
-          printWindow.document.write(`
-            <div style="background:#f8fafc; margin-bottom:12px; border-radius:12px; overflow:hidden">
-              <div style="background:${catInfo.color}; padding:10px 16px; color:white; font-weight:bold; font-size:13px">
-                ${catInfo.icon} ${catInfo.label} (${exps.length} مورد) - جمع: ${formatPrice(catTotal)} تومان
-              </div>
-          `);
-          exps.forEach(exp => {
-            printWindow.document.write(`
-              <div style="display:flex; justify-content:space-between; padding:8px 16px; border-bottom:1px solid #e2e8f0; font-size:13px">
-                <span>${exp.description || 'بدون توضیحات'}</span>
-                <div>
-                  <div>${formatPrice(exp.amount)} تومان</div>
-                  <div class="amount-word">${numberToWords(exp.amount)} تومان</div>
-                </div>
-              </div>
-            `);
-          });
-          printWindow.document.write(`</div>`);
-        }
-      } else {
-        printWindow.document.write(`<div style="text-align:center; padding:16px;">هیچ هزینه‌ای ثبت نشده است</div>`);
-      }
-      
-      printWindow.document.write(`
-                  </div>
-                </div>
-                
-                ${car.description ? `<div class="section"><div class="section-title">📝 توضیحات</div><div style="padding:16px">${car.description}</div></div>` : ''}
-              </div>
-              
-              <div class="print-buttons">
-                <button class="print-btn" onclick="window.print()">🖨️ چاپ</button>
-                <button class="back-btn" onclick="window.close()">✖️ برگشت</button>
               </div>
             </div>
-          </body>
-        </html>
+            
+            <div class="content">
+              <!-- بخش اطلاعات خریدار و فروش -->
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
+                <div class="section">
+                  <div class="section-title"><span class="icon">👤</span> اطلاعات خریدار قبلی</div>
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <span class="info-label">🚘 نام خودرو:</span>
+                      <div class="info-box">${carInfo.carName || car.originalCar?.carName}</div>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">📅 سال تولید:</span>
+                      <div class="info-box info-box-green">${carInfo.productionYear || car.originalCar?.productionYear || "-"}</div>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">🎨 رنگ:</span>
+                      <div class="info-box info-box-green">${carInfo.color || car.originalCar?.color || "-"}</div>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">👤 خریدار قبلی:</span>
+                      <div class="info-box info-box-blue">${carInfo.buyerName || car.originalCar?.buyerName}</div>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">📆 تاریخ خرید:</span>
+                      <div class="info-box info-box-date">${safeConvertToPersianDate(carInfo.purchaseDate) || safeConvertToPersianDate(car.originalCar?.purchaseDate)}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="section">
+                  <div class="section-title"><span class="icon">🤝</span> اطلاعات فروش</div>
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <span class="info-label">👤 خریدار جدید:</span>
+                      <div class="info-box info-box-yellow">${car.newBuyerName}</div>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">📆 تاریخ فروش:</span>
+                      <div class="info-box info-box-date">${safeConvertToPersianDate(car.sellDate)}</div>
+                    </div>
+                    ${car.description ? `
+                    <div class="info-item" style="grid-column: span 2;">
+                      <span class="info-label">📝 توضیحات:</span>
+                      <div class="info-box" style="flex:1;">${car.description}</div>
+                    </div>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- ===== هزینه‌های ثبت شده (اول) ===== -->
+              <div class="section">
+                <div class="section-title"><span class="icon">🔧</span> هزینه‌های ثبت شده</div>
+                <div style="padding: 16px 20px;">
+    `);
+    
+    if (car.expenses && Object.keys(car.expenses).length > 0) {
+      const grouped = {};
+      Object.values(car.expenses).forEach(exp => {
+        const cat = exp.category || 'other';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(exp);
+      });
+      
+      for (const [cat, exps] of Object.entries(grouped)) {
+        const catInfo = getCategoryLabel(cat);
+        const catTotal = exps.reduce((s, e) => s + (e.amount || 0), 0);
+        printWindow.document.write(`
+          <div class="expense-group">
+            <div class="expense-group-header" style="background:${catInfo.color};">
+              <span>${catInfo.icon} ${catInfo.label}</span>
+              <span class="count">${exps.length} مورد | جمع: ${formatPrice(catTotal)} تومان</span>
+            </div>
+        `);
+        exps.forEach(exp => {
+          printWindow.document.write(`
+            <div class="expense-item">
+              <span class="desc">${exp.description || 'بدون توضیحات'}</span>
+              <div>
+                <span class="amount">${formatPrice(exp.amount)}</span>
+                <span class="words">${numberToWords(exp.amount)} تومان</span>
+              </div>
+            </div>
+          `);
+        });
+        printWindow.document.write(`</div>`);
+      }
+    } else {
+      printWindow.document.write(`
+        <div style="text-align:center; padding:30px; color:#94a3b8; font-size:14px;">
+          <div style="font-size:40px; margin-bottom:10px;">📭</div>
+          هیچ هزینه‌ای ثبت نشده است
+        </div>
       `);
-      printWindow.document.close();
-      setSelectedCar(null);
-    }, 100);
+    }
+    
+    printWindow.document.write(`
+              </div>
+            </div>
+            
+            <!-- ===== باکس‌های ۵ گانه (بعد از هزینه‌ها) ===== -->
+            <div class="stats-grid">
+              <div class="stat-box purchase">
+                <span class="stat-icon">💰</span>
+                <div class="stat-label">مبلغ خرید</div>
+                <div class="stat-value purchase-color">${formatPrice(purchasePrice)}</div>
+                <div class="stat-words">${numberToWords(purchasePrice)} تومان</div>
+              </div>
+              
+              <div class="stat-box expenses">
+                <span class="stat-icon">🔧</span>
+                <div class="stat-label">مجموع هزینه‌ها</div>
+                <div class="stat-value expenses-color">${formatPrice(totalExpenses)}</div>
+                <div class="stat-words">${numberToWords(totalExpenses)} تومان</div>
+              </div>
+              
+              <div class="stat-box total-cost">
+                <span class="stat-icon">📊</span>
+                <div class="stat-label">هزینه کل</div>
+                <div class="stat-value total-color">${formatPrice(totalCost)}</div>
+                <div class="stat-words">${numberToWords(totalCost)} تومان</div>
+              </div>
+              
+              <div class="stat-box selling">
+                <span class="stat-icon">💵</span>
+                <div class="stat-label">مبلغ فروش</div>
+                <div class="stat-value selling-color">${formatPrice(car.sellingPrice)}</div>
+                <div class="stat-words">${numberToWords(car.sellingPrice)} تومان</div>
+              </div>
+              
+              <div class="stat-box profit ${profitValue >= 0 ? 'positive' : ''}">
+                <span class="stat-icon">${profitValue >= 0 ? '📈' : '📉'}</span>
+                <div class="stat-label">سود نهایی</div>
+                <div class="stat-value profit-color ${profitValue >= 0 ? 'positive' : ''}">
+                  ${formatPrice(Math.abs(profitValue))} ${profitValue < 0 ? '⚠️' : ''}
+                </div>
+                <div class="stat-words">${profitValue >= 0 ? 'سود' : 'زیان'} ${numberToWords(Math.abs(profitValue))} تومان</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- دکمه‌ها -->
+          <div class="print-actions">
+            <button class="print-btn" onclick="window.print()">🖨️ چاپ صورتحساب</button>
+            <button class="back-btn" onclick="window.close()">✖️ بستن</button>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  setSelectedCar(null);
+}, 100);
+};
+  const openRestoreModal = (car) => {
+    setCarToRestore(car);
+    setShowRestoreModal(true);
+  };
+
+  const confirmRestore = async () => {
+    if (!carToRestore) return;
+    
+    try {
+      const originalCarId = carToRestore.originalCar?.id;
+      
+      if (originalCarId) {
+        const carRef = ref(db, `users_emails/${emailKey}/cars/${originalCarId}`);
+        await update(carRef, { 
+          sold: false,
+          soldAt: null,
+          sellingPrice: null,
+          newBuyerName: null
+        });
+        
+        const savedExpenses = carToRestore.expenses || {};
+        for (const [expId, expData] of Object.entries(savedExpenses)) {
+          const expenseRef = ref(db, `users_emails/${emailKey}/expenses/${expId}`);
+          await set(expenseRef, {
+            ...expData,
+            carId: originalCarId,
+            carName: carToRestore.originalCar?.carName,
+            restoredAt: new Date().toISOString()
+          });
+        }
+      }
+      
+      const archiveRef = ref(db, `users_emails/${emailKey}/archivedCars/${carToRestore.id}`);
+      await remove(archiveRef);
+      
+      showToast(`✅ خودرو "${carToRestore.originalCar?.carName}" با موفقیت به لیست فعال بازگردانده شد`, "success");
+      setArchivedCars(prev => prev.filter(c => c.id !== carToRestore.id));
+      
+      if (onRestoreSuccess) onRestoreSuccess();
+      
+      setTimeout(() => {
+        if (onBack) onBack();
+      }, 1500);
+      
+    } catch (error) {
+      console.error("خطا:", error);
+      showToast(`❌ خطا در بازگرداندن خودرو`, "error");
+    } finally {
+      setShowRestoreModal(false);
+      setCarToRestore(null);
+    }
   };
 
   const filteredCars = archivedCars.filter(car => {
@@ -489,35 +825,24 @@ const ArchivedCars = ({ user, onBack }) => {
     );
   });
 
-  const inputStyle = (index, focusedIndex) => ({
-    padding: "8px 10px",
-    borderRadius: "8px",
-    width: "100%",
-    maxWidth: "700px",
-    margin: "0 auto",
-    boxSizing: "border-box",
-    fontSize: "13px",
-    backgroundColor: "#ffffff",
-    color: "#000000",
-    border: focusedIndex === index ? "2px solid #3b82f6" : "1px solid #d1d5db",
-    outline: "none",
-    transition: "all 0.2s ease-in-out",
-    marginBottom: "12px",
-    fontFamily: "inherit",
-    display: "block"
-  });
+  const totalProfit = filteredCars.reduce((sum, car) => {
+    const profit = calculateProfit(car);
+    return sum + (profit > 0 ? profit : 0);
+  }, 0);
+  const totalSales = filteredCars.reduce((sum, c) => sum + (c.sellingPrice || 0), 0);
 
-  const labelStyle = {
-    fontSize: "12px",
-    color: "#64748b",
-    marginBottom: "6px",
-    display: "block",
-    fontWeight: "500",
-    maxWidth: "700px",
-    margin: "0 auto 6px auto"
+  const getCardColor = (index) => {
+    const colors = [
+      { header: "linear-gradient(135deg, #3b82f6, #2563eb)" },
+      { header: "linear-gradient(135deg, #10b981, #059669)" },
+      { header: "linear-gradient(135deg, #f59e0b, #d97706)" },
+      { header: "linear-gradient(135deg, #8b5cf6, #7c3aed)" },
+      { header: "linear-gradient(135deg, #ec4899, #db2777)" },
+      { header: "linear-gradient(135deg, #06b6d4, #0891b2)" },
+    ];
+    return colors[index % colors.length];
   };
 
-  // استایل بارگذاری
   const loadingStyle = {
     display: "flex",
     justifyContent: "center",
@@ -536,29 +861,28 @@ const ArchivedCars = ({ user, onBack }) => {
     animation: "spin 1s linear infinite"
   };
 
-  const loadingText = {
-    fontSize: "14px",
-    color: "#64748b",
-    fontWeight: "500"
-  };
-
   if (loading) {
     return (
       <div style={loadingStyle}>
         <div style={loadingSpinner}></div>
-        <p style={loadingText}>در حال بارگذاری...</p>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+        <p>در حال بارگذاری...</p>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
     <div>
+      {toast && (
+        <div style={{
+          ...toastStyle,
+          backgroundColor: toast.type === "success" ? "#10b981" : "#ef4444",
+          animation: "slideIn 0.3s ease-out"
+        }}>
+          {toast.message}
+        </div>
+      )}
+
       <div style={headerButtonsStyle}>
         <button onClick={onBack} style={backBtnStyle}>← بازگشت</button>
         <div style={pageTitleWrapper}>
@@ -569,34 +893,44 @@ const ArchivedCars = ({ user, onBack }) => {
 
       <div style={statsContainerStyle}>
         <div style={statCardStyle}>
-          <div style={statIconStyle}>🚗</div>
+          <span style={statIconStyle}>🚗</span>
           <div>
             <div style={statValueStyle}>{filteredCars.length}</div>
             <div style={statLabelStyle}>خودروهای فروخته شده</div>
           </div>
         </div>
         <div style={statCardStyle2}>
-          <div style={statIconStyle}>💰</div>
+          <span style={statIconStyle}>💰</span>
           <div>
-            <div style={statValueStyle}>
-              {filteredCars.reduce((sum, c) => sum + (c.sellingPrice || 0), 0).toLocaleString()}
-            </div>
+            <div style={statValueStyle}>{totalSales.toLocaleString()}</div>
             <div style={statLabelStyle}>مجموع فروش (تومان)</div>
+            <div style={statWordsSmall}>{numberToWords(totalSales)} تومان</div>
+          </div>
+        </div>
+        <div style={statCardStyle3}>
+          <span style={statIconStyle}>📊</span>
+          <div>
+            <div style={statValueStyle}>{totalProfit.toLocaleString()} تومان</div>
+            <div style={statLabelStyle}>مجموع سود نهایی</div>
+            <div style={statWordsSmall}>{numberToWords(totalProfit)} تومان</div>
           </div>
         </div>
       </div>
 
       <div style={{ marginBottom: "24px" }}>
-        <label style={labelStyle}>🔍 جستجو</label>
-        <input
-          type="text"
-          placeholder="جستجو در نام خودرو یا خریدار جدید..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={inputStyle(999, focusedIndex)}
-          onFocus={() => setFocusedIndex(999)}
-          onBlur={() => setFocusedIndex(null)}
-        />
+        <div style={{ position: "relative", maxWidth: "350px" }}>
+          <span style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", color: "#94a3b8" }}>🔍</span>
+          <input
+            type="text"
+            placeholder="جستجو در نام خودرو یا خریدار جدید..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: "100%", padding: "10px 35px 10px 15px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "13px", outline: "none", backgroundColor: "#rgb(226, 232, 240)", color: "#1e293b" }}
+          />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm("")} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: "14px", cursor: "pointer", color: "#94a3b8" }}>✕</button>
+          )}
+        </div>
       </div>
 
       {filteredCars.length === 0 ? (
@@ -606,26 +940,19 @@ const ArchivedCars = ({ user, onBack }) => {
         </div>
       ) : (
         <div style={carsGridStyle}>
-          {filteredCars.map((car) => {
-            const purchasePrice = car.purchasePrice || car.originalCar?.purchasePrice || 0;
+          {filteredCars.map((car, index) => {
+            const purchasePrice = Number(car.purchasePrice) || Number(car.originalCar?.purchasePrice) || 0;
             const totalExpenses = car.totalExpense || (car.expenses ? Object.values(car.expenses).reduce((sum, exp) => sum + (exp.amount || 0), 0) : 0);
-            const totalCostWithPurchase = car.totalCost || (purchasePrice + totalExpenses);
+            const totalCost = purchasePrice + totalExpenses;
+            const profitValue = (Number(car.sellingPrice) || 0) - totalCost;
+            const cardColor = getCardColor(index);
             
-            const expensesByCategory = {};
-            if (car.expenses && Object.keys(car.expenses).length > 0) {
-              Object.values(car.expenses).forEach(exp => {
-                const cat = exp.category || 'other';
-                if (!expensesByCategory[cat]) {
-                  expensesByCategory[cat] = [];
-                }
-                expensesByCategory[cat].push(exp);
-              });
-            }
+            const carInfo = car.originalCar || {};
             
             return (
               <div key={car.id} style={archiveCardStyle}>
-                <div style={archiveHeaderStyle}>
-                  <h3 style={archiveTitleStyle}>🚗 {car.originalCar?.carName}</h3>
+                <div style={{...archiveHeaderStyle, background: cardColor.header}}>
+                  <h3 style={archiveTitleStyle}>🚗 {carInfo.carName || "-"}</h3>
                   <span style={archiveBadgeStyle}>فروخته شده</span>
                 </div>
 
@@ -634,88 +961,13 @@ const ArchivedCars = ({ user, onBack }) => {
                     <h4 style={sectionTitleStyle}>📋 اطلاعات خریدار</h4>
                     <div style={infoRowStyle}>
                       <span>خریدار قبلی:</span>
-                      <div style={rightBoxStyle('buyer')}>{car.originalCar?.buyerName}</div>
+                      <div style={rightBoxStyle('buyer')}>{carInfo.buyerName || "-"}</div>
                     </div>
                     <div style={infoRowStyle}>
                       <span>تاریخ خرید:</span>
-                      <div style={rightBoxStyle('date')}>{safeConvertToPersianDate(car.originalCar?.purchaseDate)}</div>
+                      <div style={rightBoxStyle('date')}>{safeConvertToPersianDate(carInfo.purchaseDate) || "-"}</div>
                     </div>
                   </div>
-
-                  <div style={threeColumnsStyle}>
-                    <div style={columnCardStyle}>
-                      <div style={columnTitleStyle(true)}>💰 مبلغ خرید</div>
-                      <div style={rightBoxStyle('purchase')}>
-                        <div style={{ fontWeight: "bold", fontSize: "14px" }}>{formatPrice(purchasePrice)} تومان</div>
-                        <div style={wordsStyle}>{numberToWords(purchasePrice)} تومان</div>
-                      </div>
-                    </div>
-                    
-                    <div style={columnCardStyle}>
-                      <div style={columnTitleStyle(true)}>🔧 مجموع هزینه‌ها</div>
-                      <div style={rightBoxStyle('expense')}>
-                        <div style={{ fontWeight: "bold", color: "#f59e0b", fontSize: "14px" }}>{formatPrice(totalExpenses)} تومان</div>
-                        <div style={wordsStyle}>{numberToWords(totalExpenses)} تومان</div>
-                      </div>
-                    </div>
-                    
-                    <div style={columnCardStyle}>
-                      <div style={columnTitleStyle(true)}>💰 هزینه کل</div>
-                      <div style={rightBoxStyle('total')}>
-                        <div style={{ fontWeight: "bold", color: "#7c3aed", fontSize: "14px" }}>{formatPrice(totalCostWithPurchase)} تومان</div>
-                        <div style={wordsStyle}>{numberToWords(totalCostWithPurchase)} تومان</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={threeColumnsStyle}>
-                    <div style={columnCardStyle}>
-                      <div style={columnTitleStyle(true)}>💵 قیمت فروش</div>
-                      <div style={rightBoxStyle('selling')}>
-                        <div style={{ fontWeight: "bold", color: "#16a34a", fontSize: "14px" }}>{formatPrice(car.sellingPrice)} تومان</div>
-                        <div style={wordsStyle}>{numberToWords(car.sellingPrice)} تومان</div>
-                      </div>
-                    </div>
-                    
-                    <div style={columnCardStyle}>
-                      <div style={columnTitleStyle(car.profit >= 0)}>📊 سود نهایی</div>
-                      <div style={car.profit >= 0 ? rightBoxStyle('profit') : rightBoxStyle('loss')}>
-                        <div style={{ fontWeight: "bold", color: car.profit >= 0 ? "#16a34a" : "#dc2626", fontSize: "14px" }}>
-                          {formatPrice(Math.abs(car.profit))} تومان {car.profit < 0 ? "(زیان)" : ""}
-                        </div>
-                        <div style={tinyWordsStyle}>{numberToWords(Math.abs(car.profit))} تومان</div>
-                      </div>
-                    </div>
-                    
-                    <div style={columnCardStyle}></div>
-                  </div>
-
-                  {Object.keys(expensesByCategory).length > 0 && (
-                    <div style={expenseSectionStyle}>
-                      <h4 style={sectionTitleStyle}>🔧 هزینه‌های ثبت شده</h4>
-                      <div style={expenseListStyle}>
-                        {Object.entries(expensesByCategory).slice(0, 4).map(([cat, exps]) => {
-                          const catInfo = getCategoryLabel(cat);
-                          const catTotal = exps.reduce((s, e) => s + (e.amount || 0), 0);
-                          return (
-                            <div key={cat} style={{...expenseCategoryItem, borderRight: `3px solid ${catInfo.color}`}}>
-                              <div style={expenseCategoryHeader}>
-                                <span>{catInfo.icon} {catInfo.label}</span>
-                                <span>{exps.length} مورد</span>
-                              </div>
-                              <div style={expenseCategoryTotal}>
-                                جمع: {formatPrice(catTotal)} تومان
-                              </div>
-                              <div style={tinyWordsStyle}>{numberToWords(catTotal)} تومان</div>
-                            </div>
-                          );
-                        })}
-                        {Object.keys(expensesByCategory).length > 4 && (
-                          <div style={moreExpenseStyle}>+ {Object.keys(expensesByCategory).length - 4} دسته دیگر</div>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   <div style={infoSectionStyle}>
                     <h4 style={sectionTitleStyle}>📋 اطلاعات فروش</h4>
@@ -729,89 +981,161 @@ const ArchivedCars = ({ user, onBack }) => {
                     </div>
                   </div>
 
-                  <button onClick={() => handlePrint(car)} style={printBtnStyle}>
-                    🖨️ چاپ صورتحساب کامل
-                  </button>
+                  <div style={carSpecsStyle}>
+                    <h4 style={specsTitleStyle}>🚘 مشخصات خودرو</h4>
+                    <div style={specsGridStyle}>
+                      <div style={specsItemStyle}>
+                        <span style={specsLabelStyle}>📅 سال تولید:</span>
+                        <span style={specsValueStyle}>{carInfo.productionYear || "-"}</span>
+                      </div>
+                      <div style={specsItemStyle}>
+                        <span style={specsLabelStyle}>🎨 رنگ:</span>
+                        <span style={specsValueStyle}>{carInfo.color || "-"}</span>
+                      </div>
+                    </div>
+                    {(carInfo.description || car.originalCar?.description) && (
+                      <div style={specsItemStyle}>
+                        <span style={specsLabelStyle}>📝 توضیحات:</span>
+                        <span style={specsValueStyle}>{carInfo.description || car.originalCar?.description}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {car.expenses && Object.keys(car.expenses).length > 0 && (
+                    <div style={expenseSectionStyle}>
+                      <h4 style={sectionTitleStyle}>🔧 هزینه‌های ثبت شده</h4>
+                      <div style={expenseListStyle}>
+                        {Object.entries(car.expenses).slice(0, 4).map(([expId, exp]) => (
+                          <div key={expId} style={{...expenseCategoryItem, borderRight: `3px solid ${getCategoryLabel(exp.category).color}`}}>
+                            <div style={expenseCategoryHeader}>
+                              <span>{getCategoryLabel(exp.category).icon} {getCategoryLabel(exp.category).label}</span>
+                              <span>{formatPrice(exp.amount)} تومان</span>
+                            </div>
+                            {exp.description && <div style={expenseDescStyle}>{exp.description}</div>}
+                            <div style={tinyWordsStyle}>{numberToWords(exp.amount)} تومان</div>
+                          </div>
+                        ))}
+                        {Object.keys(car.expenses).length > 4 && (
+                          <div style={moreExpenseStyle}>+ {Object.keys(car.expenses).length - 4} هزینه دیگر</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
+                    <div style={{ background: "#f1f5f9", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "4px" }}>💰 مبلغ خرید</div>
+                      <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b" }}>{formatPrice(purchasePrice)}</div>
+                      <div style={{ fontSize: "9px", color: "#10b981" }}>{numberToWords(purchasePrice)}</div>
+                    </div>
+                    <div style={{ background: "#fef3c7", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", color: "#d97706", marginBottom: "4px" }}>🔧 مجموع هزینه‌ها</div>
+                      <div style={{ fontSize: "14px", fontWeight: "bold", color: "#d97706" }}>{formatPrice(totalExpenses)}</div>
+                      <div style={{ fontSize: "9px", color: "#f59e0b" }}>{numberToWords(totalExpenses)}</div>
+                    </div>
+                    <div style={{ background: "#ede9fe", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", color: "#7c3aed", marginBottom: "4px" }}>💰 هزینه کل</div>
+                      <div style={{ fontSize: "14px", fontWeight: "bold", color: "#7c3aed" }}>{formatPrice(totalCost)}</div>
+                      <div style={{ fontSize: "9px", color: "#8b5cf6" }}>{numberToWords(totalCost)}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
+                    <div style={{ background: "#dcfce7", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", color: "#16a34a", marginBottom: "4px" }}>💵 قیمت فروش</div>
+                      <div style={{ fontSize: "14px", fontWeight: "bold", color: "#16a34a" }}>{formatPrice(car.sellingPrice)}</div>
+                      <div style={{ fontSize: "9px", color: "#10b981" }}>{numberToWords(car.sellingPrice)}</div>
+                    </div>
+                    <div style={{ background: profitValue >= 0 ? "#fef3c7" : "#fee2e2", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", color: profitValue >= 0 ? "#d97706" : "#dc2626", marginBottom: "4px" }}>📊 سود نهایی</div>
+                      <div style={{ fontSize: "14px", fontWeight: "bold", color: profitValue >= 0 ? "#16a34a" : "#dc2626" }}>{formatPrice(Math.abs(profitValue))} {profitValue < 0 ? "(زیان)" : ""}</div>
+                      <div style={{ fontSize: "9px", color: profitValue >= 0 ? "#f59e0b" : "#ef4444" }}>{numberToWords(Math.abs(profitValue))}</div>
+                    </div>
+                  </div>
+
+                  <div style={buttonContainerStyle}>
+                    <button onClick={() => handlePrint(car)} style={printBtnStyle}>
+                      🖨️ چاپ صورتحساب
+                    </button>
+                    <button onClick={() => openRestoreModal(car)} style={restoreBtnStyle}>
+                      ↩️ بازگشت به لیست فعال
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      <Modal isOpen={showRestoreModal} onClose={() => setShowRestoreModal(false)} title="↩️ بازگشت به لیست فعال" color="#10b981" size="sm">
+        <div style={{ textAlign: "center", padding: "20px" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔄</div>
+          <p style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "12px", color: "#1e293b" }}>بازگشت خودرو به لیست فعال</p>
+          <p style={{ fontSize: "14px", color: "#64748b", marginBottom: "8px" }}>خودرو <strong style={{ color: "#f59e0b" }}>"{carToRestore?.originalCar?.carName}"</strong></p>
+          <p style={{ fontSize: "13px", color: "#10b981", marginBottom: "24px" }}>به لیست خودروهای فعال بازگردانده می‌شود.</p>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button onClick={() => setShowRestoreModal(false)} style={{ padding: "10px 24px", background: "#64748b", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer" }}>انصراف</button>
+            <button onClick={confirmRestore} style={{ padding: "10px 24px", background: "#10b981", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>↩️ تایید و بازگشت</button>
+          </div>
+        </div>
+      </Modal>
+
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };
 
 // استایل‌ها
-const loadingStyle = { textAlign: "center", padding: "40px" };
+const toastStyle = { position: "fixed", top: "20px", right: "20px", padding: "12px 20px", borderRadius: "12px", color: "#fff", fontSize: "14px", fontWeight: "500", zIndex: 10000, display: "flex", alignItems: "center", gap: "10px" };
 const emptyStyle = { textAlign: "center", padding: "60px", background: "#fff", borderRadius: "12px" };
 
-const headerButtonsStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "20px"
-};
-
-const backBtnStyle = {
-  background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px"
-};
-
+const headerButtonsStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", gap: "16px", flexWrap: "wrap" };
+const backBtnStyle = { background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px" };
 const pageTitleWrapper = { flex: 1, textAlign: "center" };
 const pageTitleTextStyle = { fontSize: "20px", fontWeight: "bold", color: "#1e293b", margin: 0 };
 
-const statsContainerStyle = { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", marginBottom: "24px", maxWidth: "700px", margin: "0 auto 24px auto" };
-const statCardStyle = { background: "linear-gradient(135deg, #64748b, #475569)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" };
-const statCardStyle2 = { background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" };
+const statsContainerStyle = { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" };
+const statCardStyle = { background: "linear-gradient(135deg, #64748b, #475569)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" };
+const statCardStyle2 = { background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" };
+const statCardStyle3 = { background: "linear-gradient(135deg, #10b981, #059669)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" };
 const statIconStyle = { fontSize: "32px" };
 const statValueStyle = { fontSize: "24px", fontWeight: "bold" };
 const statLabelStyle = { fontSize: "12px", opacity: 0.9 };
+const statWordsSmall = { fontSize: "10px", opacity: 0.8, marginTop: "5px" };
 
-const carsGridStyle = { 
-  display: "flex", 
-  flexDirection: "column", 
-  gap: "20px",
-  alignItems: "center"
-};
-
-const archiveCardStyle = { 
-  background: "#fff", 
-  borderRadius: "16px", 
-  overflow: "hidden", 
-  boxShadow: "0 4px 20px rgba(0,0,0,0.08)", 
-  transition: "all 0.3s",
-  maxWidth: "700px",
-  width: "100%"
-};
-
-const archiveHeaderStyle = { background: "linear-gradient(135deg, #475569, #334155)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" };
+const carsGridStyle = { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px", alignItems: "start" };
+const archiveCardStyle = { background: "#fff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", transition: "all 0.3s" };
+const archiveHeaderStyle = { padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" };
 const archiveTitleStyle = { margin: 0, fontSize: "16px", fontWeight: "bold", color: "#fff" };
-const archiveBadgeStyle = { background: "#f59e0b", padding: "4px 10px", borderRadius: "20px", fontSize: "11px", color: "#fff", fontWeight: "bold" };
-const archiveContentStyle = { padding: "16px" };
+const archiveBadgeStyle = { background: "#f59e0b", padding: "4px 12px", borderRadius: "30px", fontSize: "11px", color: "#fff", fontWeight: "bold" };
+const archiveContentStyle = { padding: "20px" };
 
-const infoSectionStyle = { marginBottom: "12px", padding: "10px", background: "#f8fafc", borderRadius: "12px" };
+const infoSectionStyle = { marginBottom: "16px", padding: "12px", background: "#f8fafc", borderRadius: "14px" };
 const sectionTitleStyle = { fontSize: "13px", fontWeight: "bold", color: "#1e293b", marginBottom: "10px", paddingBottom: "6px", borderBottom: "2px solid #e2e8f0" };
 const infoRowStyle = { display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "12px", alignItems: "flex-start", flexWrap: "wrap", gap: "6px" };
 
-const expenseSectionStyle = { marginBottom: "12px", padding: "10px", background: "#fef3c7", borderRadius: "12px" };
+const carSpecsStyle = { marginBottom: "16px", padding: "12px", background: "#f0fdf4", borderRadius: "14px", borderRight: "2px solid #86efac" };
+const specsTitleStyle = { fontSize: "13px", fontWeight: "bold", color: "#166534", marginBottom: "10px", paddingBottom: "6px", borderBottom: "1px solid #bbf7d0", display: "flex", alignItems: "center", gap: "8px" };
+const specsGridStyle = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "8px" };
+const specsItemStyle = { display: "flex", justifyContent: "space-between", fontSize: "12px", padding: "6px 0", flexWrap: "wrap", gap: "6px" };
+const specsLabelStyle = { color: "#64748b", fontWeight: "500" };
+const specsValueStyle = { fontWeight: "600", color: "#1e293b" };
+
+const expenseSectionStyle = { marginBottom: "16px", padding: "12px", background: "#fef3c7", borderRadius: "14px" };
 const expenseListStyle = { display: "flex", flexDirection: "column", gap: "8px" };
-const expenseCategoryItem = { background: "#fff", padding: "8px", borderRadius: "8px" };
+const expenseCategoryItem = { background: "#fff", padding: "8px", borderRadius: "8px", marginBottom: "6px" };
 const expenseCategoryHeader = { display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "11px", fontWeight: "bold" };
-const expenseCategoryTotal = { fontSize: "12px", fontWeight: "bold", color: "#f59e0b" };
+const expenseDescStyle = { fontSize: "10px", color: "#64748b", marginTop: "4px" };
 const moreExpenseStyle = { fontSize: "10px", color: "#f59e0b", textAlign: "center", marginTop: "6px" };
 
-const printBtnStyle = {
-  width: "100%",
-  marginTop: "12px",
-  padding: "8px",
-  background: "#f59e0b",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontSize: "13px",
-  fontWeight: "bold",
-  transition: "all 0.3s"
-};
-
+const buttonContainerStyle = { display: "flex", gap: "10px", marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" };
+const printBtnStyle = { flex: 1, padding: "8px", background: "#f59e0b", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" };
+const restoreBtnStyle = { flex: 1, padding: "8px", background: "#10b981", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" };
+const tinyWordsStyle = { fontSize: "8px", color: "#94a3b8", marginTop: "2px", textAlign: "left" };
 export default ArchivedCars;

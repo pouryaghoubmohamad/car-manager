@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebaseConfig";
-import { ref, update, push, set, get } from "firebase/database";
+import { ref, update, push, set, get, remove } from "firebase/database";
 import Modal from "../Modal";
 
 const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
@@ -14,10 +14,8 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [carExpenses, setCarExpenses] = useState([]);
 
-  // تبدیل ایمیل به کلید دیتابیس
   const emailKey = user?.email?.replace(/\./g, '_').replace(/@/g, '_at_') || "";
 
-  // دریافت هزینه‌های خودرو از دیتابیس
   useEffect(() => {
     if (!car || !user || !emailKey) return;
     const fetchExpenses = async () => {
@@ -57,7 +55,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
     setShowConfirmModal(false);
 
     try {
-      // تبدیل هزینه‌ها به فرمت مناسب برای ذخیره
       const expensesObject = {};
       carExpenses.forEach(exp => {
         expensesObject[exp.id] = {
@@ -76,11 +73,13 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
           carName: car.carName || "",
           buyerName: car.buyerName || "",
           price: car.price || 0,
+          productionYear: car.productionYear || "",
+          color: car.color || "",
+          description: car.description || "",
           purchaseDate: car.purchaseDate || null,
           insuranceExpiry: car.insuranceExpiry || null,
           attorneyExpiry: car.attorneyExpiry || null,
           technicalInspectionDate: car.technicalInspectionDate || null,
-          description: car.description || "",
         },
         sellingPrice: Number(sellingPrice),
         newBuyerName: buyerName.trim(),
@@ -89,6 +88,7 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
         totalExpense: totalExpense,
         purchasePrice: purchasePrice,
         totalCost: totalCost,
+        profit: Number(sellingPrice) - totalCost,
         soldAt: new Date().toISOString(),
         expenses: expensesObject
       };
@@ -103,6 +103,10 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
         sellingPrice: Number(sellingPrice),
         newBuyerName: buyerName.trim()
       });
+
+      for (const exp of carExpenses) {
+        await remove(ref(db, `users_emails/${emailKey}/expenses/${exp.id}`));
+      }
 
       showToast("✅ خودرو با موفقیت فروخته شد و به بایگانی منتقل گردید", "success");
 
@@ -153,7 +157,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
         words.push(convertChunk(chunks[i]) + " " + thousands[chunks.length - 1 - i]);
       }
     }
-    
     return words.join(" و ");
   };
 
@@ -216,7 +219,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
           )}
 
           <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "5px" }}>
-            {/* نام خودرو */}
             <label style={labelStyle}>🚗 نام خودرو</label>
             <input
               type="text"
@@ -225,7 +227,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
               readOnly
             />
 
-            {/* قیمت فروش */}
             <label style={labelStyle}>💰 قیمت فروش (تومان) *</label>
             <input
               type="text"
@@ -245,7 +246,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
               </div>
             )}
 
-            {/* نام خریدار جدید */}
             <label style={labelStyle}>👤 نام خریدار جدید *</label>
             <input
               type="text"
@@ -257,7 +257,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
               placeholder="نام خریدار جدید"
             />
 
-            {/* تاریخ فروش */}
             <label style={labelStyle}>📅 تاریخ فروش</label>
             <input
               type="text"
@@ -269,7 +268,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
               placeholder="مثال: 1403/01/15"
             />
 
-            {/* توضیحات */}
             <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
             <textarea
               value={description}
@@ -281,7 +279,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
               rows="3"
             />
 
-            {/* دکمه‌ها */}
             <div style={{ display: "flex", gap: "10px", marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #e2e8f0" }}>
               <button onClick={onClose} style={{ flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
                 انصراف
@@ -298,7 +295,6 @@ const SellCarModal = ({ isOpen, onClose, car, user, onSold }) => {
         </div>
       </Modal>
 
-      {/* مودال تأیید فروش */}
       <Modal 
         isOpen={showConfirmModal} 
         onClose={() => setShowConfirmModal(false)} 

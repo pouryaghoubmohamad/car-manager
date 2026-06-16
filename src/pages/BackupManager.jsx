@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebaseConfig";
-import { ref, get } from "firebase/database";
+import { ref, get, push, set, remove, onValue } from "firebase/database";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
@@ -10,33 +10,52 @@ const BackupManager = ({ user, onBack }) => {
   const [toast, setToast] = useState(null);
   const [backupHistory, setBackupHistory] = useState([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const emailKey = user?.email?.replace(/\./g, '_').replace(/@/g, '_at_') || "";
 
   const showToast = (message, type) => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // بارگذاری تاریخچه بکاپ‌ها از localStorage
+  // بارگذاری تاریخچه بکاپ‌ها از Firebase
   useEffect(() => {
-    const saved = localStorage.getItem(`backupHistory_${user?.uid}`);
-    if (saved) {
-      setBackupHistory(JSON.parse(saved));
+    if (!user || !emailKey) {
+      setLoading(false);
+      return;
     }
-  }, [user]);
+    
+    const historyRef = ref(db, `users_emails/${emailKey}/backupHistory`);
+    const unsubscribe = onValue(historyRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const historyArray = Object.entries(data)
+          .map(([id, value]) => ({ id, ...value }))
+          .sort((a, b) => b.id - a.id);
+        setBackupHistory(historyArray);
+      } else {
+        setBackupHistory([]);
+      }
+      setLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [user, emailKey]);
 
-  const saveBackupHistory = (type, fileName) => {
-    const newHistory = [
-      {
-        id: Date.now(),
+  const saveBackupHistory = async (type, fileName) => {
+    try {
+      const historyRef = ref(db, `users_emails/${emailKey}/backupHistory`);
+      const newHistoryRef = push(historyRef);
+      await set(newHistoryRef, {
         type: type,
         fileName: fileName,
         date: new Date().toISOString(),
         datePersian: new Intl.DateTimeFormat('fa-IR').format(new Date())
-      },
-      ...backupHistory
-    ].slice(0, 20);
-    setBackupHistory(newHistory);
-    localStorage.setItem(`backupHistory_${user?.uid}`, JSON.stringify(newHistory));
+      });
+    } catch (error) {
+      console.error("خطا در ذخیره تاریخچه:", error);
+    }
   };
 
   // دریافت تمام داده‌های کاربر
@@ -45,7 +64,7 @@ const BackupManager = ({ user, onBack }) => {
     const data = {};
     
     for (const path of paths) {
-      const dataRef = ref(db, `users/${user.uid}/${path}`);
+      const dataRef = ref(db, `users_emails/${emailKey}/${path}`);
       const snapshot = await get(dataRef);
       if (snapshot.exists()) {
         data[path] = snapshot.val();
@@ -99,7 +118,7 @@ const BackupManager = ({ user, onBack }) => {
       const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       saveAs(blob, fileName);
       
-      saveBackupHistory('Excel', fileName);
+      await saveBackupHistory('Excel', fileName);
       showToast("✅ بکاپ Excel با موفقیت ذخیره شد", "success");
     } catch (error) {
       console.error("خطا:", error);
@@ -119,7 +138,7 @@ const BackupManager = ({ user, onBack }) => {
       const blob = new Blob([jsonStr], { type: 'application/json' });
       saveAs(blob, fileName);
       
-      saveBackupHistory('JSON', fileName);
+      await saveBackupHistory('JSON', fileName);
       showToast("✅ بکاپ JSON با موفقیت ذخیره شد", "success");
     } catch (error) {
       console.error("خطا:", error);
@@ -129,17 +148,24 @@ const BackupManager = ({ user, onBack }) => {
     }
   };
 
-  const deleteHistoryItem = (id) => {
-    setDeleteConfirmId(id);
+  const deleteHistoryItem = async (itemId) => {
+    try {
+      await remove(ref(db, `users_emails/${emailKey}/backupHistory/${itemId}`));
+      showToast("✅ آیتم از تاریخچه حذف شد", "success");
+    } catch (error) {
+      showToast("❌ خطا در حذف آیتم", "error");
+    }
   };
 
-  const confirmDelete = () => {
-    const newHistory = backupHistory.filter(item => item.id !== deleteConfirmId);
-    setBackupHistory(newHistory);
-    localStorage.setItem(`backupHistory_${user?.uid}`, JSON.stringify(newHistory));
-    showToast("✅ آیتم از تاریخچه حذف شد", "success");
-    setDeleteConfirmId(null);
-  };
+  if (loading) {
+    return (
+      <div style={loadingStyle}>
+        <div style={loadingSpinner}></div>
+        <p>در حال بارگذاری...</p>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -165,7 +191,7 @@ const BackupManager = ({ user, onBack }) => {
       <div style={cardsContainerStyle}>
         <div style={cardStyle}>
           <div style={cardIconStyle}>📊</div>
-          <h3 style={cardTitleStyle}>بکاپ Excel (هفتگی)</h3>
+          <h3 style={cardTitleStyle}>بکاپ Excel</h3>
           <p style={cardDescStyle}>گرفتن بکاپ از تمام اطلاعات در قالب فایل Excel</p>
           <p style={cardNoteStyle}>✅ مناسب برای گزارش‌گیری و تحلیل داده</p>
           <button onClick={backupToExcel} disabled={loadingExcel} style={{...cardBtnStyle, backgroundColor: "#10b981"}}>
@@ -175,7 +201,7 @@ const BackupManager = ({ user, onBack }) => {
 
         <div style={cardStyle}>
           <div style={cardIconStyle}>📄</div>
-          <h3 style={cardTitleStyle}>بکاپ JSON (ماهانه)</h3>
+          <h3 style={cardTitleStyle}>بکاپ JSON</h3>
           <p style={cardDescStyle}>گرفتن بکاپ از تمام اطلاعات در قالب فایل JSON</p>
           <p style={cardNoteStyle}>✅ مناسب برای بازیابی اطلاعات و پشتیبان‌گیری</p>
           <button onClick={backupToJSON} disabled={loadingJSON} style={{...cardBtnStyle, backgroundColor: "#3b82f6"}}>
@@ -187,8 +213,7 @@ const BackupManager = ({ user, onBack }) => {
       <div style={infoBoxStyle}>
         <h4 style={infoTitleStyle}>🔄 بکاپ خودکار</h4>
         <p style={infoTextStyle}>
-          سیستم به صورت خودکار هر هفته یک بار بکاپ Excel و هر ماه یک بار بکاپ JSON ایجاد می‌کند.
-          فایل‌ها در کامپیوتر شما ذخیره می‌شوند.
+          فایل‌های بکاپ در کامپیوتر شما ذخیره می‌شوند و تاریخچه بکاپ‌ها در دیتابیس ذخیره می‌گردد.
         </p>
         <p style={infoNoteStyle}>
           💡 برای امنیت بیشتر، توصیه می‌شود فایل‌های بکاپ را در فضای ابری (Google Drive، Dropbox و ...) نیز ذخیره کنید.
@@ -214,29 +239,6 @@ const BackupManager = ({ user, onBack }) => {
           </div>
         </div>
       )}
-
-      {/* مودال تأیید حذف */}
-      {deleteConfirmId !== null && (
-        <div style={modalOverlayStyle}>
-          <div style={modalStyle}>
-            <h3 style={modalTitleStyle}>🗑️ تأیید حذف</h3>
-            <p style={modalTextStyle}>
-              آیا از حذف این آیتم از تاریخچه بکاپ مطمئن هستید؟
-            </p>
-            <div style={modalBtnContainer}>
-              <button onClick={() => setDeleteConfirmId(null)} style={modalCancelBtn}>انصراف</button>
-              <button onClick={confirmDelete} style={modalConfirmBtn}>حذف</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };
@@ -419,65 +421,22 @@ const historyDeleteStyle = {
   fontSize: "12px"
 };
 
-// استایل‌های مودال تأیید حذف
-const modalOverlayStyle = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.5)",
+const loadingStyle = {
   display: "flex",
-  alignItems: "center",
   justifyContent: "center",
-  zIndex: 1000
+  alignItems: "center",
+  minHeight: "60vh",
+  flexDirection: "column",
+  gap: "16px"
 };
 
-const modalStyle = {
-  backgroundColor: "#fff",
-  borderRadius: "16px",
-  padding: "24px",
-  width: "90%",
-  maxWidth: "400px",
-  textAlign: "center"
-};
-
-const modalTitleStyle = {
-  fontSize: "20px",
-  fontWeight: "bold",
-  marginBottom: "16px",
-  color: "#1e293b"
-};
-
-const modalTextStyle = {
-  fontSize: "14px",
-  color: "#64748b",
-  marginBottom: "24px"
-};
-
-const modalBtnContainer = {
-  display: "flex",
-  gap: "12px"
-};
-
-const modalCancelBtn = {
-  flex: 1,
-  padding: "10px",
-  backgroundColor: "#64748b",
-  color: "#fff",
-  border: "none",
-  borderRadius: "8px",
-  cursor: "pointer"
-};
-
-const modalConfirmBtn = {
-  flex: 1,
-  padding: "10px",
-  backgroundColor: "#ef4444",
-  color: "#fff",
-  border: "none",
-  borderRadius: "8px",
-  cursor: "pointer"
+const loadingSpinner = {
+  width: "50px",
+  height: "50px",
+  border: "4px solid #e2e8f0",
+  borderTop: "4px solid #f59e0b",
+  borderRadius: "50%",
+  animation: "spin 1s linear infinite"
 };
 
 export default BackupManager;

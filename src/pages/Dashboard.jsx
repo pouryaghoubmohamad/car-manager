@@ -98,8 +98,6 @@ const Dashboard = ({ user }) => {
     auth.signOut();
   };
 
-  const formatPrice = (price) => price?.toLocaleString() || "0";
-
   const numberToWords = (num) => {
     if (!num || num === 0) return "صفر";
     const ones = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"];
@@ -136,50 +134,19 @@ const Dashboard = ({ user }) => {
     return words.join(" و ");
   };
 
-  // محاسبه آمار
+  // ========== محاسبه آمار (اصلاح شده) ==========
   const totalCarsCount = cars.length;
   const totalPurchasePrice = cars.reduce((sum, car) => sum + (Number(car.price) || 0), 0);
   
-  let totalCarExpenses = 0;
-  expenses.forEach(exp => {
-    const carExists = cars.some(car => car.id === exp.carId);
-    if (carExists) {
-      totalCarExpenses += Number(exp.amount) || 0;
-    }
-  });
+  // جمع کل هزینه‌های خودرو (بدون شرط - همه هزینه‌ها رو جمع کن)
+  const totalCarExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
   
   const totalOfficeExpenses = officeExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
   const totalIncomes = incomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
-  const uniqueCustomers = [...new Set(cars.map(car => car.buyerName))].length;
+  
+  // تعداد مشتریان منحصر به فرد (فیلتر کردن مقادیر خالی)
+  const uniqueCustomers = [...new Set(cars.map(car => car.buyerName).filter(name => name && name !== ""))].length;
   const totalDealerships = dealerships.length;
-
-  // استایل باکس‌ها
-  const statsContainerStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "20px",
-    marginBottom: "30px"
-  };
-
-  const statCardStyle = (bgColor) => ({
-    background: bgColor,
-    padding: "24px 20px",
-    borderRadius: "20px",
-    color: "#fff",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    transition: "transform 0.2s, box-shadow 0.2s",
-    textAlign: "center",
-    cursor: "pointer",
-    ":hover": {
-      transform: "translateY(-5px)",
-      boxShadow: "0 8px 25px rgba(0,0,0,0.15)"
-    }
-  });
-
-  const statIconStyle = { fontSize: "40px", marginBottom: "12px" };
-  const statLabelStyle = { fontSize: "13px", opacity: 0.9, marginBottom: "8px", fontWeight: "500" };
-  const statValueStyle = { fontSize: "24px", fontWeight: "bold", marginBottom: "6px" };
-  const statWordsStyle = { fontSize: "10px", opacity: 0.8, marginTop: "6px" };
 
   // استایل بارگذاری
   const loadingStyle = {
@@ -295,7 +262,30 @@ const Dashboard = ({ user }) => {
   );
 };
 
-// استایل‌ها
+// ========== استایل‌ها ==========
+const statsContainerStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  gap: "20px",
+  marginBottom: "30px"
+};
+
+const statCardStyle = (bgColor) => ({
+  background: bgColor,
+  padding: "24px 20px",
+  borderRadius: "20px",
+  color: "#fff",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  transition: "transform 0.2s, box-shadow 0.2s",
+  textAlign: "center",
+  cursor: "pointer"
+});
+
+const statIconStyle = { fontSize: "40px", marginBottom: "12px" };
+const statLabelStyle = { fontSize: "13px", opacity: 0.9, marginBottom: "8px", fontWeight: "500" };
+const statValueStyle = { fontSize: "24px", fontWeight: "bold", marginBottom: "6px" };
+const statWordsStyle = { fontSize: "10px", opacity: 0.8, marginTop: "6px" };
+
 const headerStyle = {
   display: "flex",
   justifyContent: "space-between",
@@ -330,9 +320,7 @@ const logoutBtnStyle = {
   fontWeight: "bold",
   display: "flex",
   alignItems: "center",
-  gap: "8px",
-  transition: "all 0.2s",
-  ":hover": { backgroundColor: "#dc2626", transform: "scale(1.02)" }
+  gap: "8px"
 };
 
 const pageTitleStyle = {

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebaseConfig";
 import { ref, onValue, remove, push, set, update } from "firebase/database";
-import Modal from "../Modal";
 import DataTable from "react-data-table-component";
+import Modal from "../Modal";
 
 const DealershipList = ({ user, onBack }) => {
   const [dealerships, setDealerships] = useState([]);
@@ -11,10 +11,8 @@ const DealershipList = ({ user, onBack }) => {
   const [toast, setToast] = useState(null);
   const [openConfirmModal, setOpenConfirmModal] = useState(false);
   const [dealershipToDelete, setDealershipToDelete] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingDealership, setEditingDealership] = useState(null);
   
+  const [showAddModal, setShowAddModal] = useState(false);
   const [newDealership, setNewDealership] = useState({
     name: "",
     phone: "",
@@ -23,6 +21,8 @@ const DealershipList = ({ user, onBack }) => {
     createdAt: new Date().toISOString()
   });
   
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingDealership, setEditingDealership] = useState(null);
   const [editDealership, setEditDealership] = useState({
     name: "",
     phone: "",
@@ -157,6 +157,92 @@ const DealershipList = ({ user, onBack }) => {
     }
   };
 
+  // تابع پرینت
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    const totalCount = filteredData.length;
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>لیست نمایندگی‌ها</title>
+          <meta charset="UTF-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap');
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: 'Vazirmatn', 'Vazir', 'IRANSans', Tahoma, sans-serif;
+              direction: rtl;
+              padding: 30px;
+              background: #fff;
+            }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #8b5cf6; padding-bottom: 15px; }
+            .header h1 { font-size: 24px; color: #1e293b; }
+            .header p { font-size: 12px; color: #64748b; margin-top: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; font-size: 13px; }
+            th { background: #f8fafc; font-weight: bold; color: #475569; }
+            .total { margin-top: 20px; text-align: left; font-size: 16px; font-weight: bold; background: #ede9fe; padding: 10px; border-radius: 8px; }
+            .bottom-buttons {
+              display: flex;
+              justify-content: center;
+              gap: 16px;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #e2e8f0;
+            }
+            .print-btn, .close-btn {
+              padding: 10px 32px;
+              border: none;
+              border-radius: 10px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: bold;
+              font-family: inherit;
+            }
+            .print-btn { background: #8b5cf6; color: white; }
+            .close-btn { background: #64748b; color: white; }
+            @media print {
+              .bottom-buttons { display: none; }
+              body { padding: 10px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🏢 لیست نمایندگی‌ها</h1>
+            <p>تاریخ چاپ: ${new Intl.DateTimeFormat('fa-IR').format(new Date())}</p>
+          </div>
+          <table>
+            <thead>
+              <tr><th>#</th><th>نام نمایندگی</th><th>شماره تماس</th><th>آدرس</th><th>توضیحات</th><th>تاریخ ثبت</th></tr>
+            </thead>
+            <tbody>
+              ${filteredData.map((item, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${item.name}</td>
+                  <td>${item.phone}</td>
+                  <td>${item.address || "-"}</td>
+                  <td>${item.description || "-"}</td>
+                  <td>${item.createdAtPersian || toPersianDate(item.createdAt)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="total">تعداد کل نمایندگی‌ها: ${totalCount} عدد</div>
+          <div class="bottom-buttons">
+            <button class="print-btn" onclick="window.print()">🖨️ چاپ</button>
+            <button class="close-btn" onclick="window.close()">✖️ برگشت</button>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const formatPhone = (phone) => phone || "-";
+
   const toPersianDate = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -168,8 +254,6 @@ const DealershipList = ({ user, onBack }) => {
     }).format(date);
   };
 
-  const formatPhone = (phone) => phone || "-";
-
   const filteredData = dealerships.filter(item => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -179,7 +263,9 @@ const DealershipList = ({ user, onBack }) => {
     );
   });
 
-  // ستون‌های جدول با عرض مساوی (grow: 1)
+  const totalCount = filteredData.length;
+
+  // ستون‌های جدول
   const columns = [
     {
       name: "ردیف",
@@ -199,7 +285,7 @@ const DealershipList = ({ user, onBack }) => {
       name: "شماره تماس",
       selector: (row) => row.phone,
       sortable: true,
-      grow: 1,
+      width: "130px",
       cell: (row) => (
         <span style={{
           background: "#dcfce7",
@@ -207,27 +293,10 @@ const DealershipList = ({ user, onBack }) => {
           borderRadius: "16px",
           fontSize: "12px",
           color: "#16a34a",
-          display: "inline-block"
+          display: "inline-block",
+          whiteSpace: "nowrap"
         }}>
           📞 {formatPhone(row.phone)}
-        </span>
-      )
-    },
-    {
-      name: "تاریخ ثبت",
-      selector: (row) => row.createdAtPersian || toPersianDate(row.createdAt),
-      sortable: true,
-      grow: 1,
-      cell: (row) => (
-        <span style={{
-          background: "#dbeafe",
-          padding: "4px 10px",
-          borderRadius: "16px",
-          fontSize: "12px",
-          color: "#1e40af",
-          display: "inline-block"
-        }}>
-          {row.createdAtPersian || toPersianDate(row.createdAt)}
         </span>
       )
     },
@@ -244,18 +313,59 @@ const DealershipList = ({ user, onBack }) => {
           fontSize: "12px",
           color: "#d97706",
           display: "inline-block",
-          maxWidth: "100%",
+          maxWidth: "250px",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap"
         }}>
-          📍 {row.address.length > 40 ? row.address.substring(0, 40) + "..." : row.address}
+          📍 {row.address}
         </span>
       ) : "-"
     },
     {
+      name: "توضیحات",
+      selector: (row) => row.description,
+      sortable: true,
+      grow: 1.5,
+      cell: (row) => row.description ? (
+        <span style={{
+          background: "#e0e7ff",
+          padding: "4px 10px",
+          borderRadius: "16px",
+          fontSize: "12px",
+          color: "#4338ca",
+          display: "inline-block",
+          maxWidth: "200px",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
+        }}>
+          📝 {row.description}
+        </span>
+      ) : "-"
+    },
+    {
+      name: "تاریخ ثبت",
+      selector: (row) => row.createdAtPersian || toPersianDate(row.createdAt),
+      sortable: true,
+      width: "110px",
+      cell: (row) => (
+        <span style={{
+          background: "#dbeafe",
+          padding: "4px 10px",
+          borderRadius: "16px",
+          fontSize: "12px",
+          color: "#1e40af",
+          display: "inline-block",
+          whiteSpace: "nowrap"
+        }}>
+          {row.createdAtPersian || toPersianDate(row.createdAt)}
+        </span>
+      )
+    },
+    {
       name: "عملیات",
-      width: "85px",
+      width: "100px",
       center: true,
       cell: (row) => (
         <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
@@ -267,11 +377,8 @@ const DealershipList = ({ user, onBack }) => {
               padding: "5px 8px",
               borderRadius: "6px",
               cursor: "pointer",
-              fontSize: "13px",
-              transition: "all 0.2s"
+              fontSize: "13px"
             }}
-            onMouseEnter={(e) => e.target.style.background = "#c7d2fe"}
-            onMouseLeave={(e) => e.target.style.background = "#e0e7ff"}
             title="ویرایش"
           >
             ✏️
@@ -284,11 +391,8 @@ const DealershipList = ({ user, onBack }) => {
               padding: "5px 8px",
               borderRadius: "6px",
               cursor: "pointer",
-              fontSize: "13px",
-              transition: "all 0.2s"
+              fontSize: "13px"
             }}
-            onMouseEnter={(e) => e.target.style.background = "#fecaca"}
-            onMouseLeave={(e) => e.target.style.background = "#fee2e2"}
             title="حذف"
           >
             🗑️
@@ -299,48 +403,12 @@ const DealershipList = ({ user, onBack }) => {
   ];
 
   const customStyles = {
-    table: {
-      style: {
-        borderRadius: "16px",
-        overflow: "hidden"
-      }
-    },
-    headRow: {
-      style: {
-        backgroundColor: "#f1f5f9",
-        borderBottom: "1px solid #e2e8f0"
-      }
-    },
-    headCells: {
-      style: {
-        fontSize: "13px",
-        fontWeight: "bold",
-        color: "#475569",
-        padding: "12px 16px"
-      }
-    },
-    rows: {
-      style: {
-        fontSize: "13px",
-        color: "#334155",
-        borderBottom: "1px solid #e2e8f0",
-        transition: "background 0.2s",
-        "&:hover": {
-          backgroundColor: "#f8fafc"
-        }
-      }
-    },
-    cells: {
-      style: {
-        padding: "12px 16px"
-      }
-    },
-    pagination: {
-      style: {
-        borderTop: "1px solid #e2e8f0",
-        padding: "12px 16px"
-      }
-    }
+    table: { style: { borderRadius: "16px", overflow: "hidden" } },
+    headRow: { style: { backgroundColor: "#f1f5f9", borderBottom: "1px solid #e2e8f0" } },
+    headCells: { style: { fontSize: "13px", fontWeight: "bold", color: "#475569", padding: "12px 16px" } },
+    rows: { style: { fontSize: "13px", color: "#334155", borderBottom: "1px solid #e2e8f0" } },
+    cells: { style: { padding: "12px 16px" } },
+    pagination: { style: { borderTop: "1px solid #e2e8f0", padding: "12px 16px" } }
   };
 
   const inputStyle = (index, focusedIndex) => ({
@@ -372,7 +440,7 @@ const DealershipList = ({ user, onBack }) => {
     alignItems: "center",
     minHeight: "60vh",
     flexDirection: "column",
-    gap: "20px"
+    gap: "16px"
   };
 
   const loadingSpinner = {
@@ -384,29 +452,19 @@ const DealershipList = ({ user, onBack }) => {
     animation: "spin 1s linear infinite"
   };
 
-  const loadingText = {
-    fontSize: "14px",
-    color: "#64748b",
-    fontWeight: "500"
-  };
-
   if (loading) {
     return (
       <div style={loadingStyle}>
         <div style={loadingSpinner}></div>
-        <p style={loadingText}>در حال بارگذاری...</p>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+        <p>در حال بارگذاری...</p>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
-    <div>
+    <div style={{ padding: "24px", backgroundColor: "#f1f5f9", minHeight: "80vh", borderRadius: "16px" }}>
+      {/* Toast */}
       {toast && (
         <div style={{
           position: "fixed",
@@ -425,99 +483,121 @@ const DealershipList = ({ user, onBack }) => {
         </div>
       )}
 
-      <div style={headerButtonsStyle}>
-        <button onClick={onBack} style={backBtnStyle}>← بازگشت</button>
-        <div style={pageTitleWrapper}>
-          <h2 style={pageTitleTextStyle}>🏢 لیست نمایندگی‌ها</h2>
+      {/* دکمه‌های بالا */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+        <button onClick={onBack} style={{ background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px" }}>
+          ← بازگشت
+        </button>
+        <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "bold", color: "#1e293b" }}>🏢 نمایندگی‌ها</h2>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button onClick={() => setShowAddModal(true)} style={{ background: "#8b5cf6", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
+            ➕ ثبت نمایندگی جدید
+          </button>
+          <button onClick={handlePrint} style={{ background: "#8b5cf6", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
+            🖨️ پرینت
+          </button>
         </div>
-        <button onClick={() => setShowAddModal(true)} style={addBtnStyle}>➕ ثبت نمایندگی جدید</button>
       </div>
 
-      <div style={searchSectionStyle}>
-      
-        <div style={statsBadgeStyle}>
-          <span>🏢</span>
-          <span>تعداد کل: {filteredData.length} نمایندگی</span>
+      {/* آمار */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(1, 1fr)", gap: "16px", marginBottom: "24px", maxWidth: "300px" }}>
+        <div style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" }}>
+          <span style={{ fontSize: "32px" }}>🏢</span>
+          <div>
+            <div style={{ fontSize: "24px", fontWeight: "bold" }}>{totalCount}</div>
+            <div style={{ fontSize: "12px", opacity: 0.9 }}>تعداد نمایندگی‌ها</div>
+          </div>
         </div>
-          <div style={searchWrapperStyle}>
-          <span style={searchIconStyle}>🔍</span>
+      </div>
+
+      {/* جستجو */}
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ position: "relative", maxWidth: "350px" }}>
+          <span style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>🔍</span>
           <input
             type="text"
-            placeholder="جستجو..."
+            placeholder="جستجو در نام، شماره تماس یا آدرس..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={searchInputStyle}
-          />
-          {searchTerm && (
-            <button onClick={() => setSearchTerm("")} style={clearSearchBtn}>✕</button>
-          )}
-        </div>
-      </div>
-
-      <div style={tableOuterContainer}>
-        <div style={tableContainerStyle}>
-          <DataTable
-            columns={columns}
-            data={filteredData}
-            customStyles={customStyles}
-            pagination
-            paginationPerPage={10}
-            paginationRowsPerPageOptions={[5, 10, 25, 50]}
-            responsive
-            highlightOnHover
-            striped
-            noDataComponent={
-              <div style={{ textAlign: "center", padding: "40px" }}>
-                <span style={{ fontSize: "48px", display: "block", marginBottom: "12px" }}>🏢</span>
-                <p>هیچ نمایندگی‌ای ثبت نشده است</p>
-                <button onClick={() => setShowAddModal(true)} style={emptyTableBtnStyle}>➕ ثبت نمایندگی جدید</button>
-              </div>
-            }
+            style={{ width: "100%", padding: "10px 35px 10px 15px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "13px", outline: "none" }}
           />
         </div>
       </div>
 
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="➕ ثبت نمایندگی جدید" color="#3b82f6" size="md">
-        <div style={modalFormStyle}>
+      {/* جدول */}
+      <div style={{ background: "#fff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", border: "1px solid #e2e8f0" }}>
+        <DataTable
+          columns={columns}
+          data={filteredData}
+          customStyles={customStyles}
+          pagination
+          paginationPerPage={10}
+          paginationRowsPerPageOptions={[5, 10, 25, 50]}
+          responsive
+          highlightOnHover
+          striped
+          noDataComponent={
+            <div style={{ textAlign: "center", padding: "40px" }}>
+              <span style={{ fontSize: "48px", display: "block", marginBottom: "12px" }}>🏢</span>
+              <p>هیچ نمایندگی‌ای ثبت نشده است</p>
+              <button onClick={() => setShowAddModal(true)} style={{ marginTop: "16px", padding: "8px 20px", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>➕ ثبت نمایندگی جدید</button>
+            </div>
+          }
+        />
+      </div>
+
+      {/* مودال ثبت نمایندگی */}
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="➕ ثبت نمایندگی جدید" color="#8b5cf6" size="md">
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <label style={labelStyle}>🏢 نام نمایندگی *</label>
-          <input type="text" placeholder="مثال: ایران خودرو - شعبه مرکزی" value={newDealership.name} onChange={(e) => setNewDealership({...newDealership, name: e.target.value})} style={inputStyle(0, null)} />
+          <input type="text" placeholder="مثال: ایران خودرو" value={newDealership.name} onChange={(e) => setNewDealership({...newDealership, name: e.target.value})} style={inputStyle(0, null)} />
+          
           <label style={labelStyle}>📞 شماره تماس *</label>
-          <input type="tel" placeholder="مثال: 021-12345678" value={newDealership.phone} onChange={(e) => setNewDealership({...newDealership, phone: e.target.value})} style={inputStyle(1, null)} />
+          <input type="text" placeholder="مثال: 021-12345678" value={newDealership.phone} onChange={(e) => setNewDealership({...newDealership, phone: e.target.value})} style={inputStyle(1, null)} />
+          
           <label style={labelStyle}>📍 آدرس (اختیاری)</label>
-          <input type="text" placeholder="مثال: تهران، خیابان آزادی، پلاک ۱۲۳" value={newDealership.address} onChange={(e) => setNewDealership({...newDealership, address: e.target.value})} style={inputStyle(2, null)} />
+          <input type="text" placeholder="مثال: تهران، خیابان آزادی" value={newDealership.address} onChange={(e) => setNewDealership({...newDealership, address: e.target.value})} style={inputStyle(2, null)} />
+          
           <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
           <textarea value={newDealership.description} onChange={(e) => setNewDealership({...newDealership, description: e.target.value})} style={{...inputStyle(3, null), minHeight: "60px", resize: "vertical"}} placeholder="توضیحات اضافی..." rows="3" />
-          <div style={modalBtnContainer}>
-            <button onClick={() => setShowAddModal(false)} style={cancelBtnStyle}>انصراف</button>
-            <button onClick={handleAddDealership} style={submitBtnStyle}>✅ ثبت نمایندگی</button>
+          
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            <button onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>انصراف</button>
+            <button onClick={handleAddDealership} style={{ flex: 1, padding: "10px", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>✅ ثبت نمایندگی</button>
           </div>
         </div>
       </Modal>
 
+      {/* مودال ویرایش نمایندگی */}
       <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="✏️ ویرایش نمایندگی" color="#8b5cf6" size="md">
-        <div style={modalFormStyle}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <label style={labelStyle}>🏢 نام نمایندگی *</label>
-          <input type="text" placeholder="مثال: ایران خودرو - شعبه مرکزی" value={editDealership.name} onChange={(e) => setEditDealership({...editDealership, name: e.target.value})} style={inputStyle(10, null)} />
+          <input type="text" placeholder="مثال: ایران خودرو" value={editDealership.name} onChange={(e) => setEditDealership({...editDealership, name: e.target.value})} style={inputStyle(10, null)} />
+          
           <label style={labelStyle}>📞 شماره تماس *</label>
-          <input type="tel" placeholder="مثال: 021-12345678" value={editDealership.phone} onChange={(e) => setEditDealership({...editDealership, phone: e.target.value})} style={inputStyle(11, null)} />
+          <input type="text" placeholder="مثال: 021-12345678" value={editDealership.phone} onChange={(e) => setEditDealership({...editDealership, phone: e.target.value})} style={inputStyle(11, null)} />
+          
           <label style={labelStyle}>📍 آدرس (اختیاری)</label>
-          <input type="text" placeholder="مثال: تهران، خیابان آزادی، پلاک ۱۲۳" value={editDealership.address} onChange={(e) => setEditDealership({...editDealership, address: e.target.value})} style={inputStyle(12, null)} />
+          <input type="text" placeholder="مثال: تهران، خیابان آزادی" value={editDealership.address} onChange={(e) => setEditDealership({...editDealership, address: e.target.value})} style={inputStyle(12, null)} />
+          
           <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
           <textarea value={editDealership.description} onChange={(e) => setEditDealership({...editDealership, description: e.target.value})} style={{...inputStyle(13, null), minHeight: "60px", resize: "vertical"}} placeholder="توضیحات" rows="3" />
-          <div style={modalBtnContainer}>
-            <button onClick={() => setShowEditModal(false)} style={cancelBtnStyle}>انصراف</button>
-            <button onClick={handleUpdateDealership} style={submitBtnPurpleStyle}>✏️ ویرایش نمایندگی</button>
+          
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            <button onClick={() => setShowEditModal(false)} style={{ flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>انصراف</button>
+            <button onClick={handleUpdateDealership} style={{ flex: 1, padding: "10px", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>✏️ ویرایش نمایندگی</button>
           </div>
         </div>
       </Modal>
 
+      {/* مودال حذف */}
       <Modal isOpen={openConfirmModal} onClose={() => setOpenConfirmModal(false)} title="🗑️ تأیید حذف" color="#ef4444" size="sm">
-        <div style={confirmModalStyle}>
-          <p style={confirmTextStyle}>آیا از حذف نمایندگی <strong>"{dealershipToDelete?.name}"</strong> مطمئن هستید؟</p>
-          <p style={confirmWarningStyle}>این عمل غیرقابل بازگشت است.</p>
-          <div style={confirmBtnContainer}>
-            <button onClick={() => setOpenConfirmModal(false)} style={confirmCancelBtn}>انصراف</button>
-            <button onClick={confirmDelete} style={confirmDeleteBtn}>حذف نمایندگی</button>
+        <div style={{ textAlign: "center", padding: "10px" }}>
+          <p style={{ fontSize: "16px", marginBottom: "12px" }}>آیا از حذف نمایندگی <strong>"{dealershipToDelete?.name}"</strong> مطمئن هستید؟</p>
+          <p style={{ fontSize: "12px", color: "#ef4444", marginBottom: "20px" }}>این عمل غیرقابل بازگشت است.</p>
+          <div style={{ display: "flex", gap: "12px", marginTop: "10px" }}>
+            <button onClick={() => setOpenConfirmModal(false)} style={{ flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>انصراف</button>
+            <button onClick={confirmDelete} style={{ flex: 1, padding: "10px", background: "#ef4444", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>حذف نمایندگی</button>
           </div>
         </div>
       </Modal>
@@ -527,108 +607,9 @@ const DealershipList = ({ user, onBack }) => {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
         }
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
       `}</style>
     </div>
   );
 };
-
-const headerButtonsStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", gap: "10px", flexWrap: "wrap" };
-const backBtnStyle = { background: "#64748b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px" };
-const addBtnStyle = { background: "#3b82f6", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" };
-const pageTitleWrapper = { flex: 1, textAlign: "center" };
-const pageTitleTextStyle = { fontSize: "20px", fontWeight: "bold", color: "#1e293b", margin: 0 };
-
-const searchSectionStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "24px",
-  gap: "16px",
-  flexWrap: "wrap"
-};
-
-const statsBadgeStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  background: "linear-gradient(135deg, #e0e7ff, #c7d2fe)",
-  padding: "8px 16px",
-  borderRadius: "20px",
-  fontSize: "13px",
-  fontWeight: "500",
-  color: "#4338ca"
-};
-
-const searchWrapperStyle = { position: "relative", flex: "0 0 300px" };
-const searchIconStyle = { 
-  position: "absolute", 
-  right: "12px", 
-  top: "50%", 
-  transform: "translateY(-50%)", 
-  fontSize: "14px", 
-  color: "#94a3b8",
-  pointerEvents: "none"
-};
-const clearSearchBtn = { 
-  position: "absolute", 
-  left: "12px", 
-  top: "50%", 
-  transform: "translateY(-50%)", 
-  background: "none", 
-  border: "none", 
-  fontSize: "14px", 
-  cursor: "pointer", 
-  color: "#94a3b8",
-  padding: "4px",
-  borderRadius: "50%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.2s"
-};
-const searchInputStyle = { 
-  width: "100%", 
-  padding: "8px 35px 8px 35px", 
-  borderRadius: "10px", 
-  border: "1px solid #cbd5e1", 
-  backgroundColor: "#ffffff",
-  fontSize: "13px", 
-  outline: "none", 
-  transition: "all 0.2s ease"
-};
-
-const tableOuterContainer = {
-  display: "flex",
-  justifyContent: "center",
-  width: "100%"
-};
-const tableContainerStyle = {
-  width: "100%",
-  maxWidth: "1200px",
-  background: "#fff",
-  borderRadius: "16px",
-  overflow: "hidden",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-  border: "1px solid #e2e8f0"
-};
-
-const emptyTableBtnStyle = { marginTop: "16px", padding: "8px 20px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px" };
-
-const modalFormStyle = { display: "flex", flexDirection: "column", gap: "12px" };
-const modalBtnContainer = { display: "flex", gap: "10px", marginTop: "10px" };
-const cancelBtnStyle = { flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" };
-const submitBtnStyle = { flex: 1, padding: "10px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" };
-const submitBtnPurpleStyle = { flex: 1, padding: "10px", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" };
-
-const confirmModalStyle = { textAlign: "center", padding: "10px" };
-const confirmTextStyle = { fontSize: "16px", marginBottom: "12px" };
-const confirmWarningStyle = { fontSize: "12px", color: "#ef4444", marginBottom: "20px" };
-const confirmBtnContainer = { display: "flex", gap: "12px", marginTop: "10px" };
-const confirmCancelBtn = { flex: 1, padding: "10px", background: "#64748b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" };
-const confirmDeleteBtn = { flex: 1, padding: "10px", background: "#ef4444", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" };
 
 export default DealershipList;

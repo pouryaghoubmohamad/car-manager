@@ -1,8 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { auth, db } from "./firebaseConfig";
-import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue } from "firebase/database";
-import Login from "./Login";
+import React, { useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import CarList from "./pages/CarList";
 import AddCar from "./pages/CarForm";
@@ -13,12 +9,16 @@ import DealershipList from "./pages/DealershipList";
 import BackupManager from "./pages/BackupManager";
 import SellCarModal from "./pages/SellCarModal";
 import CustomerList from "./pages/CustomerList";
-import CustomerForm from "./pages/CustomerForm";
+import ProfitManager from "./pages/ProfitManager";
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState("login");
+  // کاربر ثابت - بدون لاگین
+  const [user, setUser] = useState({ 
+    uid: "single-user", 
+    email: "admin@carmanager.com" 
+  });
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState("dashboard");
   const [editingCar, setEditingCar] = useState(null);
   const [selectedCarForSale, setSelectedCarForSale] = useState(null);
   const [sellModalOpen, setSellModalOpen] = useState(false);
@@ -29,28 +29,6 @@ function App() {
   const showToast = (message, type) => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (user) {
-        setCurrentPage("dashboard");
-        checkOfflineData(user.uid);
-      } else {
-        setCurrentPage("login");
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const checkOfflineData = (uid) => {
-    const saved = localStorage.getItem(`offline_cars_${uid}`);
-    if (saved) {
-      const offlineCars = JSON.parse(saved);
-      setOfflineCount(offlineCars.length);
-    }
   };
 
   const handleAddCar = () => {
@@ -64,7 +42,7 @@ function App() {
   };
 
   const handleBackFromAddCar = () => {
-    setCurrentPage("dashboard");
+    setCurrentPage("carList");
     setEditingCar(null);
   };
 
@@ -81,40 +59,20 @@ function App() {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={loadingContainer}>
-        <div style={loadingSpinner}></div>
-        <p style={loadingText}>در حال بارگذاری...</p>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login onLogin={setUser} />;
-  }
-
-  const sidebarWidth = sidebarOpen ? "200px" : "50px";
+  const sidebarWidth = sidebarOpen ? "180px" : "45px";
 
   return (
     <div style={appContainer}>
       {/* نوار کناری (منو) - سمت راست */}
       <div style={{...sidebarStyle, width: sidebarWidth, right: 0, left: "auto"}}>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} style={hamburgerBtn}>
-          {sidebarOpen ? "▶" : "◀"}
+          {sidebarOpen ? "◀" : "▶"}
         </button>
 
         <div style={sidebarHeader}>
           {sidebarOpen ? (
             <>
               <h2 style={sidebarTitle}>🚗 مدیریت خودرو</h2>
-              <p style={sidebarUser}>{user?.email}</p>
             </>
           ) : (
             <div style={sidebarMiniLogo}>🚗</div>
@@ -126,9 +84,9 @@ function App() {
             onClick={() => setCurrentPage("dashboard")}
             style={{
               ...menuBtnStyle,
-              backgroundColor: currentPage === "dashboard" ? "#f59e0b" : "#334155",
+              backgroundColor: currentPage === "dashboard" ? "#f59e0b" : "transparent",
               justifyContent: sidebarOpen ? "flex-start" : "center",
-              padding: sidebarOpen ? "8px 12px" : "8px"
+              padding: sidebarOpen ? "6px 8px" : "4px"
             }}
             title="داشبورد"
           >
@@ -140,9 +98,9 @@ function App() {
             onClick={() => setCurrentPage("carList")}
             style={{
               ...menuBtnStyle,
-              backgroundColor: currentPage === "carList" ? "#f59e0b" : "#334155",
+              backgroundColor: currentPage === "carList" ? "#f59e0b" : "transparent",
               justifyContent: sidebarOpen ? "flex-start" : "center",
-              padding: sidebarOpen ? "8px 12px" : "8px"
+              padding: sidebarOpen ? "6px 8px" : "4px"
             }}
             title="خودروهای فعال"
           >
@@ -154,9 +112,9 @@ function App() {
             onClick={() => setCurrentPage("archived")}
             style={{
               ...menuBtnStyle,
-              backgroundColor: currentPage === "archived" ? "#f59e0b" : "#334155",
+              backgroundColor: currentPage === "archived" ? "#f59e0b" : "transparent",
               justifyContent: sidebarOpen ? "flex-start" : "center",
-              padding: sidebarOpen ? "8px 12px" : "8px"
+              padding: sidebarOpen ? "6px 8px" : "4px"
             }}
             title="بایگانی"
           >
@@ -168,9 +126,9 @@ function App() {
             onClick={() => setCurrentPage("officeExpenses")}
             style={{
               ...menuBtnStyle,
-              backgroundColor: currentPage === "officeExpenses" ? "#f59e0b" : "#334155",
+              backgroundColor: currentPage === "officeExpenses" ? "#f59e0b" : "transparent",
               justifyContent: sidebarOpen ? "flex-start" : "center",
-              padding: sidebarOpen ? "8px 12px" : "8px"
+              padding: sidebarOpen ? "6px 8px" : "4px"
             }}
             title="هزینه‌های دفتری"
           >
@@ -182,9 +140,9 @@ function App() {
             onClick={() => setCurrentPage("incomes")}
             style={{
               ...menuBtnStyle,
-              backgroundColor: currentPage === "incomes" ? "#f59e0b" : "#334155",
+              backgroundColor: currentPage === "incomes" ? "#f59e0b" : "transparent",
               justifyContent: sidebarOpen ? "flex-start" : "center",
-              padding: sidebarOpen ? "8px 12px" : "8px"
+              padding: sidebarOpen ? "6px 8px" : "4px"
             }}
             title="درآمدها"
           >
@@ -196,9 +154,9 @@ function App() {
             onClick={() => setCurrentPage("dealerships")}
             style={{
               ...menuBtnStyle,
-              backgroundColor: currentPage === "dealerships" ? "#f59e0b" : "#334155",
+              backgroundColor: currentPage === "dealerships" ? "#f59e0b" : "transparent",
               justifyContent: sidebarOpen ? "flex-start" : "center",
-              padding: sidebarOpen ? "8px 12px" : "8px"
+              padding: sidebarOpen ? "6px 8px" : "4px"
             }}
             title="نمایندگی‌ها"
           >
@@ -206,14 +164,13 @@ function App() {
             <span style={menuIcon}>🏢</span>
           </button>
 
-          {/* دکمه مشتریان */}
           <button
             onClick={() => setCurrentPage("customers")}
             style={{
               ...menuBtnStyle,
-              backgroundColor: currentPage === "customers" ? "#f59e0b" : "#334155",
+              backgroundColor: currentPage === "customers" ? "#f59e0b" : "transparent",
               justifyContent: sidebarOpen ? "flex-start" : "center",
-              padding: sidebarOpen ? "8px 12px" : "8px"
+              padding: sidebarOpen ? "6px 8px" : "4px"
             }}
             title="مشتریان"
           >
@@ -221,15 +178,30 @@ function App() {
             <span style={menuIcon}>👥</span>
           </button>
 
-          {/* دکمه بکاپ */}
+          <button
+            onClick={() => setCurrentPage("profit")}
+            style={{
+              ...menuBtnStyle,
+              backgroundColor: currentPage === "profit" ? "#f59e0b" : "transparent",
+              justifyContent: sidebarOpen ? "flex-start" : "center",
+              padding: sidebarOpen ? "6px 8px" : "4px"
+            }}
+            title="مدیریت سود"
+          >
+            {sidebarOpen && <span style={menuText}>📈 سود و گزارش</span>}
+            <span style={menuIcon}>📈</span>
+          </button>
+
+          {/* دکمه بکاپ - با margin-top: auto به پایین می‌رود */}
           <button
             onClick={() => setCurrentPage("backup")}
             style={{
               ...menuBtnStyle,
+              backgroundColor: currentPage === "backup" ? "#f59e0b" : "transparent",
               justifyContent: sidebarOpen ? "flex-start" : "center",
-              padding: sidebarOpen ? "8px 12px" : "8px",
-              backgroundColor: currentPage === "backup" ? "#f59e0b" : "#334155",
-              marginTop: "20px"
+              padding: sidebarOpen ? "6px 8px" : "4px",
+              marginTop: "auto",
+              marginBottom: "4px"
             }}
             title="مدیریت بکاپ"
           >
@@ -241,7 +213,7 @@ function App() {
         <div style={sidebarFooter}>
           {offlineCount > 0 && sidebarOpen && (
             <div style={offlineBadge}>
-              📱 {offlineCount} خودرو در صف همگام‌سازی
+              📱 {offlineCount} در صف
             </div>
           )}
           {!sidebarOpen && offlineCount > 0 && (
@@ -270,6 +242,7 @@ function App() {
           <AddCar
             user={user}
             onBack={handleBackFromAddCar}
+            onSaved={handleBackFromAddCar}
             editingCar={editingCar}
           />
         )}
@@ -277,6 +250,9 @@ function App() {
           <ArchivedCars
             user={user}
             onBack={() => setCurrentPage("dashboard")}
+            onRestoreSuccess={() => {
+              console.log("خودرو بازیابی شد");
+            }}
           />
         )}
         {currentPage === "officeExpenses" && (
@@ -301,15 +277,10 @@ function App() {
           <CustomerList
             user={user}
             onBack={() => setCurrentPage("dashboard")}
-            onAddCustomer={() => setCurrentPage("addCustomer")}
           />
         )}
-        {currentPage === "addCustomer" && (
-          <CustomerForm
-            user={user}
-            onSaved={() => setCurrentPage("customers")}
-            onCancel={() => setCurrentPage("customers")}
-          />
+        {currentPage === "profit" && (
+          <ProfitManager user={user} onBack={() => setCurrentPage("dashboard")} />
         )}
         {currentPage === "backup" && (
           <BackupManager
@@ -343,7 +314,7 @@ function App() {
   );
 }
 
-// استایل‌ها
+// استایل‌ها - اصلاح شده با padding کمتر
 const appContainer = {
   display: "flex",
   minHeight: "100vh",
@@ -353,16 +324,16 @@ const appContainer = {
 
 const hamburgerBtn = {
   position: "absolute",
-  top: "10px",
-  left: "10px",
+  top: "8px",
+  left: "8px",
   right: "auto",
   zIndex: 200,
   background: "#f59e0b",
   border: "none",
-  width: "26px",
-  height: "26px",
+  width: "24px",
+  height: "24px",
   borderRadius: "6px",
-  fontSize: "11px",
+  fontSize: "10px",
   cursor: "pointer",
   color: "#fff",
   display: "flex",
@@ -380,44 +351,37 @@ const sidebarStyle = {
   height: "100vh",
   overflow: "hidden",
   zIndex: 100,
-  justifyContent: "space-between",
+  justifyContent: "flex-start",
   transition: "width 0.3s ease",
   top: 0,
   boxShadow: "-2px 0 10px rgba(0,0,0,0.1)"
 };
 
 const sidebarHeader = {
-  padding: "14px 10px",
+  padding: "10px 8px",
   borderBottom: "1px solid #334155",
   textAlign: "center",
-  marginTop: "32px"
+  marginTop: "28px"
 };
 
 const sidebarTitle = {
   margin: 0,
-  fontSize: "14px",
+  fontSize: "12px",
   fontWeight: "bold",
   color: "#fff"
 };
 
-const sidebarUser = {
-  margin: "4px 0 0 0",
-  fontSize: "9px",
-  color: "#94a3b8",
-  wordBreak: "break-all"
-};
-
 const sidebarMiniLogo = {
-  fontSize: "24px",
+  fontSize: "20px",
   textAlign: "center"
 };
 
 const sidebarMenu = {
   flex: 1,
-  padding: "10px",
+  padding: "6px",
   display: "flex",
   flexDirection: "column",
-  gap: "5px",
+  gap: "3px",
   overflow: "hidden"
 };
 
@@ -426,14 +390,16 @@ const menuBtnStyle = {
   borderRadius: "6px",
   cursor: "pointer",
   fontSize: "11px",
-  fontWeight: "bold",
+  fontWeight: "500",
   color: "#fff",
   textAlign: "left",
   transition: "all 0.2s",
   display: "flex",
   alignItems: "center",
-  gap: "6px",
-  width: "100%"
+  gap: "4px",
+  width: "100%",
+  minHeight: "28px",
+  whiteSpace: "nowrap"
 };
 
 const menuIcon = {
@@ -445,35 +411,33 @@ const menuText = {
 };
 
 const sidebarFooter = {
-  padding: "8px",
+  padding: "4px 6px",
   borderTop: "1px solid #334155"
 };
 
 const offlineBadge = {
-  padding: "6px",
+  padding: "4px 6px",
   backgroundColor: "#f59e0b",
-  borderRadius: "8px",
+  borderRadius: "6px",
   textAlign: "center",
-  fontSize: "9px",
+  fontSize: "8px",
   fontWeight: "bold",
-  marginBottom: "8px",
   color: "#fff"
 };
 
 const offlineBadgeMini = {
-  padding: "6px",
+  padding: "4px",
   backgroundColor: "#f59e0b",
-  borderRadius: "8px",
+  borderRadius: "6px",
   textAlign: "center",
-  fontSize: "12px",
-  marginBottom: "8px",
+  fontSize: "10px",
   color: "#fff",
   cursor: "pointer"
 };
 
 const contentStyle = {
   flex: 1,
-  padding: "20px",
+  padding: "16px",
   overflowY: "auto",
   minHeight: "100vh",
   transition: "margin-right 0.3s ease"
@@ -495,28 +459,14 @@ const toastStyle = {
   gap: "8px"
 };
 
-const loadingContainer = {
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "center",
-  height: "100vh",
-  backgroundColor: "#f1f5f9"
-};
-
-const loadingSpinner = {
-  width: "50px",
-  height: "50px",
-  border: "4px solid #e2e8f0",
-  borderTop: "4px solid #f59e0b",
-  borderRadius: "50%",
-  animation: "spin 1s linear infinite"
-};
-
-const loadingText = {
-  marginTop: "16px",
-  color: "#64748b",
-  fontSize: "14px"
-};
+// اضافه کردن انیمیشن
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+`;
+document.head.appendChild(style);
 
 export default App;
