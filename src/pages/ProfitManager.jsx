@@ -1889,8 +1889,8 @@ const handleMonthlyExport = (year, monthIndex) => {
   };
 
   const inputStyle = (index, focusedIndex) => ({
-    padding: "8px 10px", borderRadius: "8px", width: "100%", boxSizing: "border-box", fontSize: "13px",
-    backgroundColor: "#ffffff", color: "#000000", border: focusedIndex === index ? "2px solid #3b82f6" : "1px solid #d1d5db",
+    padding: "8px 10px", borderRadius: "8px", width: "100%", boxSizing: "border-box", fontSize: "11px",
+    backgroundColor: "#ffffff", color: "#383535", border: focusedIndex === index ? "2px solid #3b82f6" : "1px solid #d1d5db",
     outline: "none", transition: "all 0.2s ease-in-out", marginBottom: "12px", fontFamily: "inherit"
   });
 
@@ -2043,13 +2043,13 @@ const handleMonthlyExport = (year, monthIndex) => {
               border: "2px solid #e2e8f0", 
               fontSize: "14px", 
               outline: "none", 
-              backgroundColor: "#111", 
+              backgroundColor: "#383737", 
               color: "#fff",
               transition: "all 0.3s",
               fontWeight: "500"
             }} 
-            onFocus={(e) => e.target.style.borderColor = "#111"}
-            onBlur={(e) => e.target.style.borderColor = "#111"}
+            onFocus={(e) => e.target.style.borderColor = "#383737"}
+            onBlur={(e) => e.target.style.borderColor = "#383737"}
           />
           {searchTerm && <button onClick={() => setSearchTerm("")} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: "16px", cursor: "pointer", color: "#94a3b8" }}>✕</button>}
         </div>
@@ -2409,44 +2409,45 @@ const handleMonthlyExport = (year, monthIndex) => {
       </Modal>
 
       {/* مودال ویرایش سود */}
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="✏️ ویرایش سود" color="#f59e0b" size="md">
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <label style={labelStyle}>📌 عنوان سود *</label>
-          <input type="text" value={editProfit.title} onChange={(e) => setEditProfit({...editProfit, title: e.target.value})} style={inputStyle(10, null)} />
-          
-          <label style={labelStyle}>💰 مبلغ (تومان) *</label>
-          <input 
-            type="text" 
-            value={editProfit.amount ? Number(editProfit.amount).toLocaleString() : ""} 
-            onChange={(e) => { 
-              let raw = e.target.value.replace(/,/g, ""); 
-              if (raw === "" || /^\d+$/.test(raw)) setEditProfit({...editProfit, amount: raw}); 
-            }} 
-            style={{...inputStyle(11, null), textAlign: "left", direction: "ltr", fontSize: "16px", fontWeight: "600"}} 
-          />
-          {editProfit.amount && editProfit.amount !== "0" && (
-            <div style={{ fontSize: "12px", color: "#10b981", marginBottom: "8px", marginTop: "-8px", fontWeight: "500" }}>
-              {numberToWords(Number(editProfit.amount))} تومان
-            </div>
-          )}
-          
-          <label style={labelStyle}>📂 دسته‌بندی</label>
-          <select value={editProfit.category} onChange={(e) => setEditProfit({...editProfit, category: e.target.value})} style={inputStyle(12, null)}>
-            {profitCategories.map((cat) => (<option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>))}
-          </select>
-          
-          <label style={labelStyle}>📅 تاریخ (شمسی)</label>
-          <input type="text" placeholder="مثال: 1405/01/15" value={editProfit.date} onChange={(e) => setEditProfit({...editProfit, date: e.target.value})} style={inputStyle(13, null)} />
-          
-          <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
-          <textarea value={editProfit.description} onChange={(e) => setEditProfit({...editProfit, description: e.target.value})} style={{...inputStyle(14, null), minHeight: "60px", resize: "vertical"}} rows="3" />
-          
-          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-            <button onClick={() => setShowEditModal(false)} style={{ flex: 1, padding: "12px", background: "#64748b", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600" }}>انصراف</button>
-            <button onClick={handleUpdateProfit} style={{ flex: 1, padding: "12px", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", boxShadow: "0 4px 15px rgba(245,158,11,0.3)" }}>✏️ ویرایش سود</button>
-          </div>
-        </div>
-      </Modal>
+ {/* مودال ویرایش سود */}
+<Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="✏️ ویرایش سود" color="#f59e0b" size="md">
+  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+    <label style={labelStyle}>📌 عنوان سود *</label>
+    <input type="text" value={editProfit.title} onChange={(e) => setEditProfit({...editProfit, title: e.target.value})} style={inputStyle(10, null)} />
+    
+    <label style={labelStyle}>💰 مبلغ (تومان) *</label>
+    <input 
+      type="text" 
+      value={editProfit.amount ? Number(editProfit.amount).toLocaleString() : ""} 
+      onChange={(e) => { 
+        let raw = e.target.value.replace(/,/g, ""); 
+        if (raw === "" || /^\d+$/.test(raw)) setEditProfit({...editProfit, amount: raw}); 
+      }} 
+      style={{...inputStyle(11, null), textAlign: "left", direction: "ltr", fontSize: "14px", fontWeight: "400"}} 
+    />
+    {editProfit.amount && editProfit.amount !== "0" && (
+      <div style={{ fontSize: "12px", color: "#10b981", marginBottom: "8px", marginTop: "-8px", fontWeight: "500" }}>
+        {numberToWords(Number(editProfit.amount))} تومان
+      </div>
+    )}
+    
+    <label style={labelStyle}>📂 دسته‌بندی</label>
+    <select value={editProfit.category} onChange={(e) => setEditProfit({...editProfit, category: e.target.value})} style={inputStyle(12, null)}>
+      {profitCategories.map((cat) => (<option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>))}
+    </select>
+    
+    <label style={labelStyle}>📅 تاریخ (شمسی)</label>
+    <input type="text" placeholder="مثال: 1405/01/15" value={editProfit.date} onChange={(e) => setEditProfit({...editProfit, date: e.target.value})} style={inputStyle(13, null)} />
+    
+    <label style={labelStyle}>📝 توضیحات (اختیاری)</label>
+    <textarea value={editProfit.description} onChange={(e) => setEditProfit({...editProfit, description: e.target.value})} style={{...inputStyle(14, null), minHeight: "60px", resize: "vertical"}} rows="3" />
+    
+    <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+      <button onClick={() => setShowEditModal(false)} style={{ flex: 1, padding: "12px", background: "#64748b", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600" }}>انصراف</button>
+      <button onClick={handleUpdateProfit} style={{ flex: 1, padding: "12px", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", boxShadow: "0 4px 15px rgba(245,158,11,0.3)" }}>✏️ ویرایش سود</button>
+    </div>
+  </div>
+</Modal>
 
       {/* مودال حذف */}
       <Modal isOpen={openConfirmModal} onClose={() => setOpenConfirmModal(false)} title="🗑️ تأیید حذف" color="#ef4444" size="sm">

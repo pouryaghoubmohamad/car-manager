@@ -401,6 +401,7 @@ const IncomeList = ({ user, onBack }) => {
     boxSizing: "border-box",
     fontSize: "13px",
     backgroundColor: "#ffffff",
+    color: "#1e293b",
     border: focusedIndex === index ? "2px solid #3b82f6" : "1px solid #d1d5db",
     outline: "none",
     transition: "all 0.2s ease-in-out",
@@ -475,12 +476,12 @@ const IncomeList = ({ user, onBack }) => {
               border: "2px solid #e2e8f0", 
               fontSize: "13px", 
               outline: "none", 
-              backgroundColor: "#111", 
+              backgroundColor: "#383737", 
               color: "#fff",
               transition: "all 0.3s"
             }}
-            onFocus={(e) => e.target.style.borderColor = "#111"}
-            onBlur={(e) => e.target.style.borderColor = "#111"}
+            onFocus={(e) => e.target.style.borderColor = "#383737"}
+            onBlur={(e) => e.target.style.borderColor = "#383737"}
           />
           {searchTerm && <button onClick={() => setSearchTerm("")} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: "14px", cursor: "pointer", color: "#94a3b8" }}>✕</button>}
         </div>

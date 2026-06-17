@@ -451,7 +451,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
             placeholder="جستجو در نام خودرو یا خریدار..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: "100%", padding: "10px 35px 10px 15px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "13px", outline: "none", backgroundColor: "#rgb(142, 140, 140)", color: "#ccd4e1" }}
+            style={{ width: "100%", padding: "10px 35px 10px 15px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "13px", outline: "none", backgroundColor: "#ffffff", color: "#1e293b" }}
           />
           {searchTerm && (
             <button onClick={() => setSearchTerm("")} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: "14px", cursor: "pointer", color: "#94a3b8" }}>✕</button>
@@ -565,7 +565,15 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                             <div key={exp.id} style={{ background: "#fff", padding: "8px 12px", borderRadius: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRight: `3px solid ${catInfo.color}` }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <span style={{ fontSize: "16px" }}>{catInfo.icon}</span>
-                                <span style={{ fontSize: "12px", fontWeight: "500" }}>{catInfo.label}</span>
+                                <div>
+                                  <span style={{ fontSize: "12px", fontWeight: "500" }}>{catInfo.label}</span>
+                                  {/* ===== توضیحات هزینه ===== */}
+                                  {exp.description && (
+                                    <div style={{ fontSize: "10px", color: "#64748b", marginTop: "2px" }}>
+                                      📝 {exp.description}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div style={{ textAlign: "left" }}>
                                 <div style={{ fontWeight: "bold", fontSize: "13px", color: "#ef4444" }}>{formatPrice(exp.amount)} تومان</div>
@@ -605,7 +613,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                     </div>
                   </div>
 
-                  {/* دکمه‌های عملیات - بدون دکمه حذف */}
+                  {/* دکمه‌های عملیات */}
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                     <button onClick={() => {
                       setSelectedCarForSale(car);
@@ -725,7 +733,12 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                         <span style={{ fontSize: "20px" }}>{catInfo.icon}</span>
                         <div>
                           <div style={{ fontWeight: "bold", fontSize: "13px" }}>{catInfo.label}</div>
-                          {exp.description && <div style={{ fontSize: "11px", color: "#64748b" }}>{exp.description}</div>}
+                          {/* ===== توضیحات هزینه در مودال همه هزینه‌ها ===== */}
+                          {exp.description && (
+                            <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                              📝 {exp.description}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div style={{ textAlign: "left" }}>

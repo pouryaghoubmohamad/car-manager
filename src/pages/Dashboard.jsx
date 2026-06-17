@@ -9,9 +9,9 @@ const Dashboard = ({ user }) => {
   const [officeExpenses, setOfficeExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
   const [dealerships, setDealerships] = useState([]);
+  const [customers, setCustomers] = useState([]); // ← اضافه شد
   const [loading, setLoading] = useState(true);
 
-  // تبدیل ایمیل به کلید دیتابیس
   const emailKey = user?.email ? user.email.replace(/\./g, '_').replace(/@/g, '_at_') : "";
 
   // دریافت خودروهای فعال
@@ -94,6 +94,21 @@ const Dashboard = ({ user }) => {
     return () => unsubscribe();
   }, [user, emailKey]);
 
+  // ===== دریافت مشتریان (جدید) =====
+  useEffect(() => {
+    if (!user || !emailKey) return;
+    const customersRef = ref(db, `users_emails/${emailKey}/customers`);
+    const unsubscribe = onValue(customersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setCustomers(Object.values(data));
+      } else {
+        setCustomers([]);
+      }
+    });
+    return () => unsubscribe();
+  }, [user, emailKey]);
+
   const handleLogout = () => {
     auth.signOut();
   };
@@ -134,21 +149,17 @@ const Dashboard = ({ user }) => {
     return words.join(" و ");
   };
 
-  // ========== محاسبه آمار (اصلاح شده) ==========
+  // ========== محاسبه آمار ==========
   const totalCarsCount = cars.length;
   const totalPurchasePrice = cars.reduce((sum, car) => sum + (Number(car.price) || 0), 0);
-  
-  // جمع کل هزینه‌های خودرو (بدون شرط - همه هزینه‌ها رو جمع کن)
   const totalCarExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-  
   const totalOfficeExpenses = officeExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
   const totalIncomes = incomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
   
-  // تعداد مشتریان منحصر به فرد (فیلتر کردن مقادیر خالی)
-  const uniqueCustomers = [...new Set(cars.map(car => car.buyerName).filter(name => name && name !== ""))].length;
+  // ===== اصلاح: تعداد مشتریان از بخش customers =====
+  const uniqueCustomers = customers.length;  // ← تغییر کرد
   const totalDealerships = dealerships.length;
 
-  // استایل بارگذاری
   const loadingStyle = {
     display: "flex",
     justifyContent: "center",
@@ -165,12 +176,6 @@ const Dashboard = ({ user }) => {
     borderTop: "4px solid #f59e0b",
     borderRadius: "50%",
     animation: "spin 1s linear infinite"
-  };
-
-  const loadingText = {
-    fontSize: "14px",
-    color: "#64748b",
-    fontWeight: "500"
   };
 
   if (loading) {
@@ -190,7 +195,6 @@ const Dashboard = ({ user }) => {
 
   return (
     <div>
-      {/* هدر با نام کاربر و دکمه خروج */}
       <div style={headerStyle}>
         <div style={userInfoStyle}>
           <span style={userIconStyle}>👤</span>
@@ -205,7 +209,6 @@ const Dashboard = ({ user }) => {
       <p style={pageSubtitleStyle}>خلاصه اطلاعات و آمار کلی سیستم</p>
 
       <div style={statsContainerStyle}>
-        {/* 1. مجموع خرید ماشین */}
         <div style={statCardStyle("linear-gradient(135deg, #3b82f6, #2563eb)")}>
           <div style={statIconStyle}>🚗</div>
           <div style={statLabelStyle}>مجموع خرید ماشین</div>
@@ -213,7 +216,6 @@ const Dashboard = ({ user }) => {
           <div style={statWordsStyle}>{numberToWords(totalPurchasePrice)} تومان</div>
         </div>
 
-        {/* 2. مجموع هزینه‌ها */}
         <div style={statCardStyle("linear-gradient(135deg, #f59e0b, #d97706)")}>
           <div style={statIconStyle}>🔧</div>
           <div style={statLabelStyle}>مجموع هزینه‌ها</div>
@@ -221,7 +223,6 @@ const Dashboard = ({ user }) => {
           <div style={statWordsStyle}>{numberToWords(totalCarExpenses)} تومان</div>
         </div>
 
-        {/* 3. مجموع هزینه دفتر */}
         <div style={statCardStyle("linear-gradient(135deg, #ef4444, #dc2626)")}>
           <div style={statIconStyle}>💰</div>
           <div style={statLabelStyle}>مجموع هزینه دفتر</div>
@@ -229,7 +230,6 @@ const Dashboard = ({ user }) => {
           <div style={statWordsStyle}>{numberToWords(totalOfficeExpenses)} تومان</div>
         </div>
 
-        {/* 4. مجموع درآمدها */}
         <div style={statCardStyle("linear-gradient(135deg, #10b981, #059669)")}>
           <div style={statIconStyle}>💵</div>
           <div style={statLabelStyle}>مجموع درآمدها</div>
@@ -237,21 +237,18 @@ const Dashboard = ({ user }) => {
           <div style={statWordsStyle}>{numberToWords(totalIncomes)} تومان</div>
         </div>
 
-        {/* 5. تعداد خودروها */}
         <div style={statCardStyle("linear-gradient(135deg, #06b6d4, #0891b2)")}>
           <div style={statIconStyle}>🚙</div>
           <div style={statLabelStyle}>تعداد خودروها</div>
           <div style={statValueStyle}>{totalCarsCount} دستگاه</div>
         </div>
 
-        {/* 6. تعداد مشتری */}
         <div style={statCardStyle("linear-gradient(135deg, #8b5cf6, #7c3aed)")}>
           <div style={statIconStyle}>👥</div>
           <div style={statLabelStyle}>تعداد مشتری</div>
           <div style={statValueStyle}>{uniqueCustomers} نفر</div>
         </div>
 
-        {/* 7. تعداد نمایندگی */}
         <div style={statCardStyle("linear-gradient(135deg, #ec4899, #db2777)")}>
           <div style={statIconStyle}>🏢</div>
           <div style={statLabelStyle}>تعداد نمایندگی</div>
@@ -334,6 +331,12 @@ const pageSubtitleStyle = {
   fontSize: "14px",
   color: "#64748b",
   margin: "0 0 24px 0"
+};
+
+const loadingText = {
+  fontSize: "14px",
+  color: "#64748b",
+  fontWeight: "500"
 };
 
 export default Dashboard;

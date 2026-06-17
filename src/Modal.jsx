@@ -9,11 +9,12 @@ const Modal = ({
   children,
   size = "md",
   showCloseButton = true,
-  closeOnOverlayClick = false,  // تغییر: false شد (بسته نمی‌شود)
+  closeOnOverlayClick = false,  // ← همینطور بمونه (بسته نمیشه)
   closeOnEsc = true,
   animation = "fade",
   showFooter = false,
-  footerContent = null
+  footerContent = null,
+  zIndex = 99999
 }) => {
   
   useEffect(() => {
@@ -54,11 +55,11 @@ const Modal = ({
   const getAnimationStyle = () => {
     switch(animation) {
       case "slide":
-        return { animation: "fadeIn 0.3s ease-out" };
+        return { animation: "modalFadeIn 0.3s ease-out" };
       case "scale":
-        return { animation: "scaleIn 0.2s ease-out" };
+        return { animation: "modalScaleIn 0.2s ease-out" };
       default:
-        return { animation: "fadeIn 0.3s ease-out" };
+        return { animation: "modalFadeIn 0.3s ease-out" };
     }
   };
 
@@ -66,21 +67,20 @@ const Modal = ({
     <>
       <style>
         {`
-          @keyframes fadeIn {
+          @keyframes modalFadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
           }
-          @keyframes scaleIn {
+          @keyframes modalScaleIn {
             from { transform: scale(0.9); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
           }
         `}
       </style>
       
-      <div style={overlayStyle} onClick={handleOverlayClick}>
+      <div style={{...overlayStyle, zIndex: zIndex}} onClick={handleOverlayClick}>
         <div style={{...modalBoxStyle, width: getModalWidth(), ...getAnimationStyle()}} onClick={(e) => e.stopPropagation()}>
           
-          {/* هدر مودال - عنوان چپ، دکمه بستن راست */}
           <div style={{...headerStyle, backgroundColor: color }}>
             <h3 style={headerTitleStyle}>{title}</h3>
             {showCloseButton && (
@@ -88,12 +88,10 @@ const Modal = ({
             )}
           </div>
 
-          {/* محتوای مودال */}
           <div style={modalContentStyle}>
             {children}
           </div>
 
-          {/* فوتر اختیاری */}
           {showFooter && (
             <div style={footerStyle}>
               {footerContent || (
@@ -111,16 +109,15 @@ const Modal = ({
   );
 };
 
-// استایل‌ها
+// ===== استایل‌ها (بدون blur) =====
 const overlayStyle = {
   position: "fixed",
   top: 0,
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.6)",
-  backdropFilter: "blur(4px)",
-  zIndex: 999999,
+  backgroundColor: "rgba(0,0,0,0.5)",  // ← blur حذف شد
+  // backdropFilter: "blur(4px)",  // ← این خط رو حذف کن یا کامنت کن
   display: "flex",
   justifyContent: "center",
   alignItems: "center"
@@ -173,10 +170,7 @@ const closeBtnStyle = {
   justifyContent: "center",
   alignItems: "center",
   fontSize: "16px",
-  transition: "all 0.2s",
-  ":hover": {
-    background: "rgba(255,255,255,0.3)"
-  }
+  transition: "all 0.2s"
 };
 
 const footerStyle = {

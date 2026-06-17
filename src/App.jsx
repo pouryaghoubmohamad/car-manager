@@ -11,6 +11,7 @@ import SellCarModal from "./pages/SellCarModal";
 import CustomerList from "./pages/CustomerList";
 import ProfitManager from "./pages/ProfitManager";
 
+
 function App() {
   // کاربر ثابت - بدون لاگین
   const [user, setUser] = useState({ 
@@ -192,7 +193,6 @@ function App() {
             <span style={menuIcon}>📈</span>
           </button>
 
-          {/* دکمه بکاپ - با margin-top: auto به پایین می‌رود */}
           <button
             onClick={() => setCurrentPage("backup")}
             style={{
@@ -208,6 +208,8 @@ function App() {
             {sidebarOpen && <span style={menuText}>💾 بکاپ</span>}
             <span style={menuIcon}>💾</span>
           </button>
+
+     
         </div>
         
         <div style={sidebarFooter}>
@@ -288,6 +290,7 @@ function App() {
             onBack={() => setCurrentPage("dashboard")}
           />
         )}
+       
       </div>
 
       {/* مودال فروش خودرو */}
@@ -314,7 +317,7 @@ function App() {
   );
 }
 
-// استایل‌ها - اصلاح شده با padding کمتر
+// ===== استایل‌ها =====
 const appContainer = {
   display: "flex",
   minHeight: "100vh",
