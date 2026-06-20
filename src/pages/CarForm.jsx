@@ -83,59 +83,63 @@ const CarForm = ({ user, onBack, onSaved, editingCar }) => {
     return words.join(" و ") + " تومان";
   };
 
-  const handleSubmit = async () => {
-    if (!carName.trim()) {
-      showToast("❌ لطفاً نام خودرو را وارد کنید", "error");
-      return;
-    }
-    if (!buyerName.trim()) {
-      showToast("❌ لطفاً نام خریدار را وارد کنید", "error");
-      return;
-    }
-    if (!price || price === "0") {
-      showToast("❌ لطفاً قیمت خودرو را وارد کنید", "error");
-      return;
-    }
+const handleSubmit = async () => {
+  if (!carName.trim()) {
+    showToast("❌ لطفاً نام خودرو را وارد کنید", "error");
+    return;
+  }
+  if (!buyerName.trim()) {
+    showToast("❌ لطفاً نام خریدار را وارد کنید", "error");
+    return;
+  }
+  if (!price || price === "0") {
+    showToast("❌ لطفاً قیمت خودرو را وارد کنید", "error");
+    return;
+  }
 
-    const formData = {
-      carName: carName.trim(),
-      buyerName: buyerName.trim(),
-      price: Number(price),
-      productionYear: productionYear.trim() || "",
-      color: color.trim() || "",
-      description: description.trim() || "",
-      purchaseDate: purchaseDate || null,
-      insuranceExpiry: insuranceExpiry || null,
-      attorneyExpiry: attorneyExpiry || null,
-      technicalInspectionDate: technicalInspectionDate || null,
-      createdAt: new Date().toISOString(),
-      sold: false
-    };
-
-    setLoading(true);
-
-    try {
-      if (isEditing) {
-        const carRef = ref(db, `users_emails/${emailKey}/cars/${editingCar.id}`);
-        await update(carRef, { ...formData, updatedAt: new Date().toISOString() });
-        showToast(`✅ خودرو "${carName}" با موفقیت ویرایش شد`, "success");
-      } else {
-        const carsRef = ref(db, `users_emails/${emailKey}/cars`);
-        await push(carsRef, formData);
-        showToast(`✅ خودرو "${carName}" با موفقیت ثبت شد`, "success");
-      }
-      
-      setTimeout(() => {
-        if (onBack) onBack();
-        if (onSaved) onSaved();
-      }, 1500);
-    } catch (error) {
-      console.error("خطا:", error);
-      showToast("❌ خطا در ذخیره اطلاعات", "error");
-    } finally {
-      setLoading(false);
-    }
+  const formData = {
+    carName: carName.trim(),
+    buyerName: buyerName.trim(),
+    price: Number(price),
+    productionYear: productionYear.trim() || "",
+    color: color.trim() || "",
+    description: description.trim() || "",
+    purchaseDate: purchaseDate || null,
+    insuranceExpiry: insuranceExpiry || null,
+    attorneyExpiry: attorneyExpiry || null,
+    technicalInspectionDate: technicalInspectionDate || null,
+    createdAt: new Date().toISOString(),
+    sold: false
   };
+
+  setLoading(true);
+
+  try {
+    if (isEditing) {
+      const carRef = ref(db, `users_emails/${emailKey}/cars/${editingCar.id}`);
+      await update(carRef, { ...formData, updatedAt: new Date().toISOString() });
+      showToast(`✅ خودرو "${carName}" با موفقیت ویرایش شد`, "success");
+    } else {
+      const carsRef = ref(db, `users_emails/${emailKey}/cars`);
+      const newCarRef = push(carsRef);
+      await set(newCarRef, {
+        ...formData,
+        id: newCarRef.key  // ← این خط رو اضافه کن
+      });
+      showToast(`✅ خودرو "${carName}" با موفقیت ثبت شد`, "success");
+    }
+    
+    setTimeout(() => {
+      if (onBack) onBack();
+      if (onSaved) onSaved();
+    }, 1500);
+  } catch (error) {
+    console.error("خطا:", error);
+    showToast("❌ خطا در ذخیره اطلاعات", "error");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const inputStyle = (index) => ({
     padding: "8px 10px",

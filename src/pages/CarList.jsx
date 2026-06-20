@@ -4,6 +4,7 @@ import { ref, onValue, remove, push, set, update, get } from "firebase/database"
 import Modal from "../Modal";
 import SellCarModal from "./SellCarModal";
 import CarForm from "./CarForm";
+import { getCarExpenses, getCarExpensesCount } from "../utils/calculations";
 
 const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
   const [cars, setCars] = useState([]);
@@ -324,8 +325,10 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
   });
 
   const totalCarCount = filteredCars.length;
+  
+  // ===== استفاده از تابع جدید برای محاسبه مجموع هزینه‌ها =====
   const totalCarsExpenses = filteredCars.reduce((sum, car) => {
-    const carExpenses = expenses ? Object.entries(expenses).filter(([_, exp]) => exp.carId === car.id).reduce((s, e) => s + (Number(e[1].amount) || 0), 0) : 0;
+    const carExpenses = getCarExpenses(car.id, Object.values(expenses || {}));
     return sum + carExpenses;
   }, 0);
 
@@ -470,10 +473,10 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px" }}>
           {filteredCars.map((car) => {
-            const carExpenses = expenses ? Object.entries(expenses)
-              .filter(([_, exp]) => exp.carId === car.id)
-              .map(([id, val]) => ({ id, ...val })) : [];
-            const totalExpense = carExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+            // ===== استفاده از تابع جدید برای هزینه‌های هر خودرو =====
+            const totalExpense = getCarExpenses(car.id, Object.values(expenses || {}));
+            const carExpenses = Object.values(expenses || {}).filter(exp => exp.carId === car.id);
+            
             const totalWithCar = (Number(car.price) || 0) + totalExpense;
             const headerColor = getHeaderColor(car.carName);
             
@@ -567,7 +570,6 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                                 <span style={{ fontSize: "16px" }}>{catInfo.icon}</span>
                                 <div>
                                   <span style={{ fontSize: "12px", fontWeight: "500" }}>{catInfo.label}</span>
-                                  {/* ===== توضیحات هزینه ===== */}
                                   {exp.description && (
                                     <div style={{ fontSize: "10px", color: "#64748b", marginTop: "2px" }}>
                                       📝 {exp.description}
@@ -613,7 +615,6 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                     </div>
                   </div>
 
-                  {/* دکمه‌های عملیات */}
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                     <button onClick={() => {
                       setSelectedCarForSale(car);
@@ -733,7 +734,6 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                         <span style={{ fontSize: "20px" }}>{catInfo.icon}</span>
                         <div>
                           <div style={{ fontWeight: "bold", fontSize: "13px" }}>{catInfo.label}</div>
-                          {/* ===== توضیحات هزینه در مودال همه هزینه‌ها ===== */}
                           {exp.description && (
                             <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
                               📝 {exp.description}

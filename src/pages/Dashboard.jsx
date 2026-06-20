@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { auth } from "../firebaseConfig";
 import { db } from "../firebaseConfig";
 import { ref, onValue } from "firebase/database";
+import { calculateCarExpenses } from "../utils/calculations";
 
 const Dashboard = ({ user }) => {
   const [cars, setCars] = useState([]);
@@ -9,7 +10,7 @@ const Dashboard = ({ user }) => {
   const [officeExpenses, setOfficeExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
   const [dealerships, setDealerships] = useState([]);
-  const [customers, setCustomers] = useState([]); // ← اضافه شد
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const emailKey = user?.email ? user.email.replace(/\./g, '_').replace(/@/g, '_at_') : "";
@@ -94,7 +95,7 @@ const Dashboard = ({ user }) => {
     return () => unsubscribe();
   }, [user, emailKey]);
 
-  // ===== دریافت مشتریان (جدید) =====
+  // دریافت مشتریان
   useEffect(() => {
     if (!user || !emailKey) return;
     const customersRef = ref(db, `users_emails/${emailKey}/customers`);
@@ -152,12 +153,13 @@ const Dashboard = ({ user }) => {
   // ========== محاسبه آمار ==========
   const totalCarsCount = cars.length;
   const totalPurchasePrice = cars.reduce((sum, car) => sum + (Number(car.price) || 0), 0);
-  const totalCarExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+  
+  // ===== استفاده از تابع مشترک برای هزینه‌ها =====
+  const totalCarExpenses = calculateCarExpenses(cars, expenses);
+  
   const totalOfficeExpenses = officeExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
   const totalIncomes = incomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
-  
-  // ===== اصلاح: تعداد مشتریان از بخش customers =====
-  const uniqueCustomers = customers.length;  // ← تغییر کرد
+  const uniqueCustomers = customers.length;
   const totalDealerships = dealerships.length;
 
   const loadingStyle = {
@@ -182,7 +184,7 @@ const Dashboard = ({ user }) => {
     return (
       <div style={loadingStyle}>
         <div style={loadingSpinner}></div>
-        <p style={loadingText}>در حال بارگذاری...</p>
+        <p style={{ fontSize: "14px", color: "#64748b", fontWeight: "500" }}>در حال بارگذاری...</p>
         <style>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -331,12 +333,6 @@ const pageSubtitleStyle = {
   fontSize: "14px",
   color: "#64748b",
   margin: "0 0 24px 0"
-};
-
-const loadingText = {
-  fontSize: "14px",
-  color: "#64748b",
-  fontWeight: "500"
 };
 
 export default Dashboard;

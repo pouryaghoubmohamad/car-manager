@@ -174,9 +174,8 @@ const ArchivedCars = ({ user, onBack, onRestoreSuccess }) => {
     }
   };
 
-
-// ========== بخش چاپ صورتحساب با دیزاین جدید ==========
-
+  // ========== بخش چاپ صورتحساب ==========
+// ========== بخش چاپ صورتحساب ==========
 const handlePrint = (car) => {
   setSelectedCar(car);
   setTimeout(() => {
@@ -196,17 +195,13 @@ const handlePrint = (car) => {
           <meta charset="UTF-8">
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap');
-            * { 
-              margin: 0; 
-              padding: 0; 
-              box-sizing: border-box; 
-            }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
               font-family: 'Vazirmatn', 'Vazir', 'IRANSans', Tahoma, sans-serif;
               direction: rtl;
               padding: 30px;
               margin: 0;
-              background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+              background: #f0f4f8;
               min-height: 100vh;
             }
             .invoice {
@@ -216,45 +211,17 @@ const handlePrint = (car) => {
               border-radius: 32px;
               overflow: hidden;
               box-shadow: 0 30px 60px rgba(0,0,0,0.15);
-              animation: fadeIn 0.5s ease-out;
             }
-            @keyframes fadeIn {
-              from { opacity: 0; transform: translateY(20px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-            
-            /* هدر اصلی */
             .header {
               background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
               padding: 30px 40px;
               text-align: center;
               color: white;
-              position: relative;
-              overflow: hidden;
-            }
-            .header::before {
-              content: '';
-              position: absolute;
-              top: -50%;
-              right: -50%;
-              width: 200%;
-              height: 200%;
-              background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
-              animation: shimmer 10s infinite linear;
-            }
-            @keyframes shimmer {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-            .header-content {
-              position: relative;
-              z-index: 1;
             }
             .header h1 {
               font-size: 28px;
               font-weight: 900;
               margin-bottom: 8px;
-              letter-spacing: 2px;
               background: linear-gradient(135deg, #fbbf24, #f59e0b);
               -webkit-background-clip: text;
               -webkit-text-fill-color: transparent;
@@ -268,11 +235,6 @@ const handlePrint = (car) => {
               font-size: 13px;
               color: #94a3b8;
             }
-            .header .sub-info span {
-              display: flex;
-              align-items: center;
-              gap: 6px;
-            }
             .header .sub-info .badge {
               background: rgba(251, 191, 36, 0.2);
               padding: 4px 16px;
@@ -282,24 +244,13 @@ const handlePrint = (car) => {
               font-size: 12px;
               border: 1px solid rgba(251, 191, 36, 0.3);
             }
-            
-            /* محتوای اصلی */
-            .content { 
-              padding: 30px 35px; 
-            }
-            
-            /* بخش‌های اطلاعاتی */
+            .content { padding: 30px 35px; }
             .section {
               margin-bottom: 24px;
               border: 1px solid #e2e8f0;
               border-radius: 20px;
               overflow: hidden;
-              transition: all 0.3s;
               background: white;
-            }
-            .section:hover {
-              border-color: #fbbf24;
-              box-shadow: 0 4px 15px rgba(251, 191, 36, 0.15);
             }
             .section-title {
               background: linear-gradient(135deg, #f8fafc, #f1f5f9);
@@ -312,11 +263,6 @@ const handlePrint = (car) => {
               align-items: center;
               gap: 10px;
             }
-            .section-title .icon {
-              font-size: 18px;
-            }
-            
-            /* گرید اطلاعات */
             .info-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
@@ -331,16 +277,8 @@ const handlePrint = (car) => {
               border-bottom: 1px dashed #e2e8f0;
               font-size: 13px;
             }
-            .info-item:last-child {
-              border-bottom: none;
-            }
-            .info-label {
-              font-weight: 600;
-              color: #64748b;
-              font-size: 12px;
-            }
-            
-            /* باکس‌های اطلاعات */
+            .info-item:last-child { border-bottom: none; }
+            .info-label { font-weight: 600; color: #64748b; font-size: 12px; }
             .info-box {
               background: #f8fafc;
               border-radius: 12px;
@@ -350,25 +288,11 @@ const handlePrint = (car) => {
               font-size: 13px;
               min-width: 120px;
             }
-            .info-box-blue {
-              background: #e0f2fe;
-              color: #0284c7;
-              font-weight: 700;
-            }
-            .info-box-date {
-              background: #dbeafe;
-              color: #1e40af;
-            }
-            .info-box-green {
-              background: #dcfce7;
-              color: #16a34a;
-            }
-            .info-box-yellow {
-              background: #fef3c7;
-              color: #b45309;
-            }
+            .info-box-blue { background: #e0f2fe; color: #0284c7; font-weight: 700; }
+            .info-box-date { background: #dbeafe; color: #1e40af; }
+            .info-box-green { background: #dcfce7; color: #16a34a; }
+            .info-box-yellow { background: #fef3c7; color: #b45309; }
             
-            /* ===== هزینه‌های ثبت شده (اول) ===== */
             .expense-group {
               background: #f8fafc;
               margin-bottom: 12px;
@@ -385,11 +309,6 @@ const handlePrint = (car) => {
               justify-content: space-between;
               align-items: center;
             }
-            .expense-group-header .count {
-              font-size: 11px;
-              opacity: 0.9;
-              font-weight: 400;
-            }
             .expense-item {
               display: flex;
               justify-content: space-between;
@@ -397,29 +316,12 @@ const handlePrint = (car) => {
               padding: 10px 16px;
               border-bottom: 1px solid #e2e8f0;
               font-size: 13px;
-              transition: background 0.2s;
             }
-            .expense-item:hover {
-              background: white;
-            }
-            .expense-item:last-child {
-              border-bottom: none;
-            }
-            .expense-item .desc {
-              font-weight: 500;
-              color: #1e293b;
-            }
-            .expense-item .amount {
-              font-weight: 700;
-              color: #0f172a;
-            }
-            .expense-item .words {
-              font-size: 9px;
-              color: #94a3b8;
-              margin-right: 8px;
-            }
+            .expense-item:last-child { border-bottom: none; }
+            .expense-item .desc { font-weight: 500; color: #1e293b; }
+            .expense-item .amount { font-weight: 700; color: #0f172a; }
+            .expense-item .words { font-size: 9px; color: #94a3b8; margin-right: 8px; }
             
-            /* ===== باکس‌های ۵ گانه (بعد از هزینه‌ها) ===== */
             .stats-grid {
               display: grid;
               grid-template-columns: repeat(5, 1fr);
@@ -432,7 +334,6 @@ const handlePrint = (car) => {
               padding: 16px 12px;
               text-align: center;
               border: 2px solid #e2e8f0;
-              transition: all 0.3s ease;
               position: relative;
               overflow: hidden;
             }
@@ -444,63 +345,30 @@ const handlePrint = (car) => {
               right: 0;
               height: 4px;
             }
-            .stat-box:hover {
-              transform: translateY(-4px);
-              box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            }
-            
-            /* رنگ‌های باکس‌ها */
             .stat-box.purchase::before { background: linear-gradient(90deg, #3b82f6, #2563eb); }
             .stat-box.purchase { border-color: #93c5fd; background: #f0f9ff; }
-            
             .stat-box.expenses::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
             .stat-box.expenses { border-color: #fcd34d; background: #fffbeb; }
-            
             .stat-box.total-cost::before { background: linear-gradient(90deg, #8b5cf6, #7c3aed); }
             .stat-box.total-cost { border-color: #c4b5fd; background: #f5f3ff; }
-            
             .stat-box.selling::before { background: linear-gradient(90deg, #10b981, #059669); }
             .stat-box.selling { border-color: #6ee7b7; background: #ecfdf5; }
-            
             .stat-box.profit::before { background: linear-gradient(90deg, #f43f5e, #e11d48); }
             .stat-box.profit { border-color: #fda4af; background: #fff1f2; }
             .stat-box.profit.positive::before { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
             .stat-box.profit.positive { border-color: #fde68a; background: #fffbeb; }
             
-            .stat-box .stat-icon {
-              font-size: 28px;
-              display: block;
-              margin-bottom: 6px;
-            }
-            .stat-box .stat-label {
-              font-size: 11px;
-              color: #64748b;
-              font-weight: 600;
-              margin-bottom: 4px;
-            }
-            .stat-box .stat-value {
-              font-size: 18px;
-              font-weight: 900;
-              color: #0f172a;
-              direction: ltr;
-            }
+            .stat-box .stat-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+            .stat-box .stat-label { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+            .stat-box .stat-value { font-size: 18px; font-weight: 900; color: #0f172a; direction: ltr; }
             .stat-box .stat-value.purchase-color { color: #2563eb; }
             .stat-box .stat-value.expenses-color { color: #d97706; }
             .stat-box .stat-value.total-color { color: #7c3aed; }
             .stat-box .stat-value.selling-color { color: #059669; }
             .stat-box .stat-value.profit-color { color: #dc2626; }
             .stat-box .stat-value.profit-color.positive { color: #16a34a; }
+            .stat-box .stat-words { font-size: 9px; color: #94a3b8; margin-top: 4px; direction: rtl; }
             
-            .stat-box .stat-words {
-              font-size: 9px;
-              color: #94a3b8;
-              margin-top: 4px;
-              direction: rtl;
-              font-weight: 400;
-              line-height: 1.4;
-            }
-            
-            /* دکمه‌ها */
             .print-actions {
               display: flex;
               gap: 14px;
@@ -523,82 +391,31 @@ const handlePrint = (car) => {
               align-items: center;
               gap: 10px;
             }
-            .print-btn {
-              background: linear-gradient(135deg, #fbbf24, #f59e0b);
-              color: #0f172a;
-              box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
-            }
-            .print-btn:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);
-            }
-            .back-btn {
-              background: #64748b;
-              color: white;
-            }
-            .back-btn:hover {
-              background: #475569;
-              transform: translateY(-2px);
-            }
+            .print-btn { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #0f172a; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3); }
+            .back-btn { background: #64748b; color: white; }
             
-            /* ریسپانسیو */
             @media (max-width: 768px) {
               body { padding: 15px; }
               .content { padding: 20px; }
-              .stats-grid {
-                grid-template-columns: repeat(3, 1fr);
-              }
-              .stats-grid .stat-box:nth-child(4),
-              .stats-grid .stat-box:nth-child(5) {
-                grid-column: span 1.5;
-              }
-              .info-grid {
-                grid-template-columns: 1fr;
-              }
-              .header .sub-info {
-                flex-direction: column;
-                gap: 8px;
-                align-items: center;
-              }
+              .stats-grid { grid-template-columns: repeat(3, 1fr); }
+              .info-grid { grid-template-columns: 1fr; }
+              .header .sub-info { flex-direction: column; gap: 8px; align-items: center; }
             }
             @media (max-width: 500px) {
-              .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-              }
-              .stats-grid .stat-box:nth-child(5) {
-                grid-column: span 2;
-              }
+              .stats-grid { grid-template-columns: repeat(2, 1fr); }
+              .stats-grid .stat-box:nth-child(5) { grid-column: span 2; }
             }
-            
             @media print {
-              body { 
-                padding: 0; 
-                background: white;
-              }
-              .invoice {
-                border-radius: 0;
-                box-shadow: none;
-              }
-              .print-actions { 
-                display: none; 
-              }
-              .stat-box {
-                border: 1px solid #e2e8f0 !important;
-                break-inside: avoid;
-              }
-              .section {
-                break-inside: avoid;
-              }
-              .stat-box:hover {
-                transform: none !important;
-                box-shadow: none !important;
-              }
+              body { padding: 0; background: white; }
+              .invoice { border-radius: 0; box-shadow: none; }
+              .print-actions { display: none; }
+              .stat-box { border: 1px solid #e2e8f0 !important; break-inside: avoid; }
+              .section { break-inside: avoid; }
             }
           </style>
         </head>
         <body>
           <div class="invoice">
-            <!-- هدر -->
             <div class="header">
               <div class="header-content">
                 <h1>🚗 صورتحساب فروش خودرو</h1>
@@ -611,58 +428,38 @@ const handlePrint = (car) => {
             </div>
             
             <div class="content">
-              <!-- بخش اطلاعات خریدار و فروش -->
+              <!-- اطلاعات خریدار و فروش -->
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
                 <div class="section">
-                  <div class="section-title"><span class="icon">👤</span> اطلاعات خریدار قبلی</div>
+                  <div class="section-title"><span>👤</span> اطلاعات خریدار قبلی</div>
                   <div class="info-grid">
-                    <div class="info-item">
-                      <span class="info-label">🚘 نام خودرو:</span>
-                      <div class="info-box">${carInfo.carName || car.originalCar?.carName}</div>
-                    </div>
-                    <div class="info-item">
-                      <span class="info-label">📅 سال تولید:</span>
-                      <div class="info-box info-box-green">${carInfo.productionYear || car.originalCar?.productionYear || "-"}</div>
-                    </div>
-                    <div class="info-item">
-                      <span class="info-label">🎨 رنگ:</span>
-                      <div class="info-box info-box-green">${carInfo.color || car.originalCar?.color || "-"}</div>
-                    </div>
-                    <div class="info-item">
-                      <span class="info-label">👤 خریدار قبلی:</span>
-                      <div class="info-box info-box-blue">${carInfo.buyerName || car.originalCar?.buyerName}</div>
-                    </div>
-                    <div class="info-item">
-                      <span class="info-label">📆 تاریخ خرید:</span>
-                      <div class="info-box info-box-date">${safeConvertToPersianDate(carInfo.purchaseDate) || safeConvertToPersianDate(car.originalCar?.purchaseDate)}</div>
-                    </div>
+                    <div class="info-item"><span class="info-label">🚘 نام خودرو:</span><div class="info-box">${carInfo.carName || car.originalCar?.carName}</div></div>
+                    <div class="info-item"><span class="info-label">📅 سال تولید:</span><div class="info-box info-box-green">${carInfo.productionYear || car.originalCar?.productionYear || "-"}</div></div>
+                    <div class="info-item"><span class="info-label">🎨 رنگ:</span><div class="info-box info-box-green">${carInfo.color || car.originalCar?.color || "-"}</div></div>
+                    <div class="info-item"><span class="info-label">👤 خریدار قبلی:</span><div class="info-box info-box-blue">${carInfo.buyerName || car.originalCar?.buyerName}</div></div>
+                    <div class="info-item"><span class="info-label">📆 تاریخ خرید:</span><div class="info-box info-box-date">${safeConvertToPersianDate(carInfo.purchaseDate) || safeConvertToPersianDate(car.originalCar?.purchaseDate)}</div></div>
                   </div>
                 </div>
                 
                 <div class="section">
-                  <div class="section-title"><span class="icon">🤝</span> اطلاعات فروش</div>
+                  <div class="section-title"><span>🤝</span> اطلاعات فروش</div>
                   <div class="info-grid">
-                    <div class="info-item">
-                      <span class="info-label">👤 خریدار جدید:</span>
-                      <div class="info-box info-box-yellow">${car.newBuyerName}</div>
-                    </div>
-                    <div class="info-item">
-                      <span class="info-label">📆 تاریخ فروش:</span>
-                      <div class="info-box info-box-date">${safeConvertToPersianDate(car.sellDate)}</div>
-                    </div>
-                    ${car.description ? `
+                    <div class="info-item"><span class="info-label">👤 خریدار جدید:</span><div class="info-box info-box-yellow">${car.newBuyerName}</div></div>
+                    <div class="info-item"><span class="info-label">📆 تاریخ فروش:</span><div class="info-box info-box-date">${safeConvertToPersianDate(car.sellDate)}</div></div>
                     <div class="info-item" style="grid-column: span 2;">
-                      <span class="info-label">📝 توضیحات:</span>
-                      <div class="info-box" style="flex:1;">${car.description}</div>
+                      <span class="info-label">💰 قیمت فروش:</span>
+                      <div class="info-box" style="flex:1; background: #dcfce7; color: #16a34a; font-weight: 700; font-size: 15px; border: 1px solid #86efac;">
+                        ${formatPrice(car.sellingPrice)} تومان
+                        <div style="font-size: 11px; font-weight: 400; color: #16a34a; margin-top: 2px;">${numberToWords(car.sellingPrice)} تومان</div>
+                      </div>
                     </div>
-                    ` : ''}
                   </div>
                 </div>
               </div>
               
-              <!-- ===== هزینه‌های ثبت شده (اول) ===== -->
+              <!-- هزینه‌های ثبت شده -->
               <div class="section">
-                <div class="section-title"><span class="icon">🔧</span> هزینه‌های ثبت شده</div>
+                <div class="section-title"><span>🔧</span> هزینه‌های ثبت شده</div>
                 <div style="padding: 16px 20px;">
     `);
     
@@ -707,115 +504,111 @@ const handlePrint = (car) => {
     }
     
     printWindow.document.write(`
+                </div>
+              </div>
+              
+              <!-- ۵ باکس آماری -->
+              <div class="stats-grid">
+                <div class="stat-box purchase">
+                  <span class="stat-icon">💰</span>
+                  <div class="stat-label">مبلغ خرید</div>
+                  <div class="stat-value purchase-color">${formatPrice(purchasePrice)}</div>
+                  <div class="stat-words">${numberToWords(purchasePrice)} تومان</div>
+                </div>
+                <div class="stat-box expenses">
+                  <span class="stat-icon">🔧</span>
+                  <div class="stat-label">مجموع هزینه‌ها</div>
+                  <div class="stat-value expenses-color">${formatPrice(totalExpenses)}</div>
+                  <div class="stat-words">${numberToWords(totalExpenses)} تومان</div>
+                </div>
+                <div class="stat-box total-cost">
+                  <span class="stat-icon">📊</span>
+                  <div class="stat-label">هزینه کل</div>
+                  <div class="stat-value total-color">${formatPrice(totalCost)}</div>
+                  <div class="stat-words">${numberToWords(totalCost)} تومان</div>
+                </div>
+                <div class="stat-box selling">
+                  <span class="stat-icon">💵</span>
+                  <div class="stat-label">مبلغ فروش</div>
+                  <div class="stat-value selling-color">${formatPrice(car.sellingPrice)}</div>
+                  <div class="stat-words">${numberToWords(car.sellingPrice)} تومان</div>
+                </div>
+                <div class="stat-box profit ${profitValue >= 0 ? 'positive' : ''}">
+                  <span class="stat-icon">${profitValue >= 0 ? '📈' : '📉'}</span>
+                  <div class="stat-label">سود نهایی</div>
+                  <div class="stat-value profit-color ${profitValue >= 0 ? 'positive' : ''}">
+                    ${formatPrice(Math.abs(profitValue))} ${profitValue < 0 ? '⚠️' : ''}
+                  </div>
+                  <div class="stat-words">${profitValue >= 0 ? 'سود' : 'زیان'} ${numberToWords(Math.abs(profitValue))} تومان</div>
+                </div>
               </div>
             </div>
             
-            <!-- ===== باکس‌های ۵ گانه (بعد از هزینه‌ها) ===== -->
-            <div class="stats-grid">
-              <div class="stat-box purchase">
-                <span class="stat-icon">💰</span>
-                <div class="stat-label">مبلغ خرید</div>
-                <div class="stat-value purchase-color">${formatPrice(purchasePrice)}</div>
-                <div class="stat-words">${numberToWords(purchasePrice)} تومان</div>
-              </div>
-              
-              <div class="stat-box expenses">
-                <span class="stat-icon">🔧</span>
-                <div class="stat-label">مجموع هزینه‌ها</div>
-                <div class="stat-value expenses-color">${formatPrice(totalExpenses)}</div>
-                <div class="stat-words">${numberToWords(totalExpenses)} تومان</div>
-              </div>
-              
-              <div class="stat-box total-cost">
-                <span class="stat-icon">📊</span>
-                <div class="stat-label">هزینه کل</div>
-                <div class="stat-value total-color">${formatPrice(totalCost)}</div>
-                <div class="stat-words">${numberToWords(totalCost)} تومان</div>
-              </div>
-              
-              <div class="stat-box selling">
-                <span class="stat-icon">💵</span>
-                <div class="stat-label">مبلغ فروش</div>
-                <div class="stat-value selling-color">${formatPrice(car.sellingPrice)}</div>
-                <div class="stat-words">${numberToWords(car.sellingPrice)} تومان</div>
-              </div>
-              
-              <div class="stat-box profit ${profitValue >= 0 ? 'positive' : ''}">
-                <span class="stat-icon">${profitValue >= 0 ? '📈' : '📉'}</span>
-                <div class="stat-label">سود نهایی</div>
-                <div class="stat-value profit-color ${profitValue >= 0 ? 'positive' : ''}">
-                  ${formatPrice(Math.abs(profitValue))} ${profitValue < 0 ? '⚠️' : ''}
-                </div>
-                <div class="stat-words">${profitValue >= 0 ? 'سود' : 'زیان'} ${numberToWords(Math.abs(profitValue))} تومان</div>
-              </div>
+            <div class="print-actions">
+              <button class="print-btn" onclick="window.print()">🖨️ چاپ صورتحساب</button>
+              <button class="back-btn" onclick="window.close()">✖️ بستن</button>
             </div>
           </div>
-          
-          <!-- دکمه‌ها -->
-          <div class="print-actions">
-            <button class="print-btn" onclick="window.print()">🖨️ چاپ صورتحساب</button>
-            <button class="back-btn" onclick="window.close()">✖️ بستن</button>
-          </div>
-        </div>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  setSelectedCar(null);
-}, 100);
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setSelectedCar(null);
+  }, 100);
 };
+
   const openRestoreModal = (car) => {
     setCarToRestore(car);
     setShowRestoreModal(true);
   };
 
-  const confirmRestore = async () => {
-    if (!carToRestore) return;
+const confirmRestore = async () => {
+  if (!carToRestore) return;
+  
+  try {
+    const originalCarId = carToRestore.originalCar?.id;
     
-    try {
-      const originalCarId = carToRestore.originalCar?.id;
+    if (originalCarId) {
+      const carRef = ref(db, `users_emails/${emailKey}/cars/${originalCarId}`);
+      await update(carRef, { 
+        sold: false,  // ← این خط مهمه
+        soldAt: null,
+        sellingPrice: null,
+        newBuyerName: null
+      });
       
-      if (originalCarId) {
-        const carRef = ref(db, `users_emails/${emailKey}/cars/${originalCarId}`);
-        await update(carRef, { 
-          sold: false,
-          soldAt: null,
-          sellingPrice: null,
-          newBuyerName: null
+      const savedExpenses = carToRestore.expenses || {};
+      for (const [expId, expData] of Object.entries(savedExpenses)) {
+        const expenseRef = ref(db, `users_emails/${emailKey}/expenses/${expId}`);
+        await set(expenseRef, {
+          ...expData,
+          carId: originalCarId,
+          carName: carToRestore.originalCar?.carName,
+          restoredAt: new Date().toISOString()
         });
-        
-        const savedExpenses = carToRestore.expenses || {};
-        for (const [expId, expData] of Object.entries(savedExpenses)) {
-          const expenseRef = ref(db, `users_emails/${emailKey}/expenses/${expId}`);
-          await set(expenseRef, {
-            ...expData,
-            carId: originalCarId,
-            carName: carToRestore.originalCar?.carName,
-            restoredAt: new Date().toISOString()
-          });
-        }
       }
-      
-      const archiveRef = ref(db, `users_emails/${emailKey}/archivedCars/${carToRestore.id}`);
-      await remove(archiveRef);
-      
-      showToast(`✅ خودرو "${carToRestore.originalCar?.carName}" با موفقیت به لیست فعال بازگردانده شد`, "success");
-      setArchivedCars(prev => prev.filter(c => c.id !== carToRestore.id));
-      
-      if (onRestoreSuccess) onRestoreSuccess();
-      
-      setTimeout(() => {
-        if (onBack) onBack();
-      }, 1500);
-      
-    } catch (error) {
-      console.error("خطا:", error);
-      showToast(`❌ خطا در بازگرداندن خودرو`, "error");
-    } finally {
-      setShowRestoreModal(false);
-      setCarToRestore(null);
     }
-  };
+    
+    const archiveRef = ref(db, `users_emails/${emailKey}/archivedCars/${carToRestore.id}`);
+    await remove(archiveRef);
+    
+    showToast(`✅ خودرو "${carToRestore.originalCar?.carName}" با موفقیت به لیست فعال بازگردانده شد`, "success");
+    setArchivedCars(prev => prev.filter(c => c.id !== carToRestore.id));
+    
+    if (onRestoreSuccess) onRestoreSuccess();
+    
+    setTimeout(() => {
+      if (onBack) onBack();
+    }, 1500);
+    
+  } catch (error) {
+    console.error("خطا:", error);
+    showToast(`❌ خطا در بازگرداندن خودرو`, "error");
+  } finally {
+    setShowRestoreModal(false);
+    setCarToRestore(null);
+  }
+};
 
   const filteredCars = archivedCars.filter(car => {
     const searchLower = searchTerm.toLowerCase();
@@ -825,11 +618,18 @@ const handlePrint = (car) => {
     );
   });
 
+  // ========== محاسبات ==========
   const totalProfit = filteredCars.reduce((sum, car) => {
     const profit = calculateProfit(car);
     return sum + (profit > 0 ? profit : 0);
   }, 0);
   const totalSales = filteredCars.reduce((sum, c) => sum + (c.sellingPrice || 0), 0);
+  
+  // ===== جدید: مجموع کل هزینه‌های همه خودروهای بایگانی شده =====
+  const totalArchivedExpenses = archivedCars.reduce((sum, car) => {
+    const carExpenses = car.totalExpense || (car.expenses ? Object.values(car.expenses).reduce((s, exp) => s + (exp.amount || 0), 0) : 0);
+    return sum + carExpenses;
+  }, 0);
 
   const getCardColor = (index) => {
     const colors = [
@@ -891,7 +691,9 @@ const handlePrint = (car) => {
         <div style={{ width: "80px" }}></div>
       </div>
 
+      {/* ===== ۴ باکس آماری ===== */}
       <div style={statsContainerStyle}>
+        {/* 1. خودروهای فروخته شده */}
         <div style={statCardStyle}>
           <span style={statIconStyle}>🚗</span>
           <div>
@@ -899,6 +701,8 @@ const handlePrint = (car) => {
             <div style={statLabelStyle}>خودروهای فروخته شده</div>
           </div>
         </div>
+        
+        {/* 2. مجموع فروش */}
         <div style={statCardStyle2}>
           <span style={statIconStyle}>💰</span>
           <div>
@@ -907,12 +711,24 @@ const handlePrint = (car) => {
             <div style={statWordsSmall}>{numberToWords(totalSales)} تومان</div>
           </div>
         </div>
+        
+        {/* 3. مجموع سود نهایی */}
         <div style={statCardStyle3}>
           <span style={statIconStyle}>📊</span>
           <div>
             <div style={statValueStyle}>{totalProfit.toLocaleString()} تومان</div>
             <div style={statLabelStyle}>مجموع سود نهایی</div>
             <div style={statWordsSmall}>{numberToWords(totalProfit)} تومان</div>
+          </div>
+        </div>
+        
+        {/* 4. مجموع کل هزینه‌های خودروها (NEW) */}
+        <div style={statCardStyle4}>
+          <span style={statIconStyle}>🔧</span>
+          <div>
+            <div style={statValueStyle}>{totalArchivedExpenses.toLocaleString()} تومان</div>
+            <div style={statLabelStyle}>مجموع هزینه‌های خودروها</div>
+            <div style={statWordsSmall}>{numberToWords(totalArchivedExpenses)} تومان</div>
           </div>
         </div>
       </div>
@@ -925,7 +741,7 @@ const handlePrint = (car) => {
             placeholder="جستجو در نام خودرو یا خریدار جدید..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: "100%", padding: "10px 35px 10px 15px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "13px", outline: "none", backgroundColor: "#rgb(226, 232, 240)", color: "#1e293b" }}
+            style={{ width: "100%", padding: "10px 35px 10px 15px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "13px", outline: "none", backgroundColor: "#ffffff", color: "#1e293b" }}
           />
           {searchTerm && (
             <button onClick={() => setSearchTerm("")} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: "14px", cursor: "pointer", color: "#94a3b8" }}>✕</button>
@@ -1091,7 +907,7 @@ const handlePrint = (car) => {
   );
 };
 
-// استایل‌ها
+// ===== استایل‌ها =====
 const toastStyle = { position: "fixed", top: "20px", right: "20px", padding: "12px 20px", borderRadius: "12px", color: "#fff", fontSize: "14px", fontWeight: "500", zIndex: 10000, display: "flex", alignItems: "center", gap: "10px" };
 const emptyStyle = { textAlign: "center", padding: "60px", background: "#fff", borderRadius: "12px" };
 
@@ -1100,10 +916,20 @@ const backBtnStyle = { background: "#64748b", color: "#fff", border: "none", pad
 const pageTitleWrapper = { flex: 1, textAlign: "center" };
 const pageTitleTextStyle = { fontSize: "20px", fontWeight: "bold", color: "#1e293b", margin: 0 };
 
-const statsContainerStyle = { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" };
+// ===== ۴ ستونه =====
+const statsContainerStyle = { 
+  display: "grid", 
+  gridTemplateColumns: "repeat(4, 1fr)", 
+  gap: "16px", 
+  marginBottom: "24px" 
+};
+
+// ===== استایل‌های ۴ باکس =====
 const statCardStyle = { background: "linear-gradient(135deg, #64748b, #475569)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" };
 const statCardStyle2 = { background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" };
 const statCardStyle3 = { background: "linear-gradient(135deg, #10b981, #059669)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" };
+const statCardStyle4 = { background: "linear-gradient(135deg, #f43f5e, #e11d48)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" };
+
 const statIconStyle = { fontSize: "32px" };
 const statValueStyle = { fontSize: "24px", fontWeight: "bold" };
 const statLabelStyle = { fontSize: "12px", opacity: 0.9 };
@@ -1138,4 +964,5 @@ const buttonContainerStyle = { display: "flex", gap: "10px", marginTop: "16px", 
 const printBtnStyle = { flex: 1, padding: "8px", background: "#f59e0b", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" };
 const restoreBtnStyle = { flex: 1, padding: "8px", background: "#10b981", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: "bold" };
 const tinyWordsStyle = { fontSize: "8px", color: "#94a3b8", marginTop: "2px", textAlign: "left" };
+
 export default ArchivedCars;
