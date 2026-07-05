@@ -382,7 +382,7 @@ const IncomeList = ({ user, onBack }) => {
     },
     { name: "تاریخ", selector: (row) => row.date || row.createdAtPersian || toPersianDate(row.createdAt), sortable: true, width: "100px", cell: (row) => (<span style={{ background: "#dbeafe", padding: "4px 10px", borderRadius: "16px", fontSize: "12px", color: "#1e40af", display: "inline-block", whiteSpace: "nowrap" }}>{row.date || row.createdAtPersian || toPersianDate(row.createdAt)}</span>) },
     { name: "توضیحات", selector: (row) => row.description, sortable: true, grow: 1, cell: (row) => row.description ? (<span style={{ background: "#e0e7ff", padding: "4px 10px", borderRadius: "16px", fontSize: "12px", color: "#4338ca", display: "inline-block", whiteSpace: "nowrap" }}>📝 {row.description.length > 30 ? row.description.substring(0, 30) + "..." : row.description}</span>) : "-" },
-    { name: "عملیات", width: "100px", center: true, cell: (row) => (<div style={{ display: "flex", gap: "6px", justifyContent: "center" }}><button onClick={() => handleEditClick(row)} style={{ background: "#e0e7ff", border: "none", padding: "5px 8px", borderRadius: "6px", cursor: "pointer" }} title="ویرایش">✏️</button><button onClick={() => handleDeleteClick(row)} style={{ background: "#fee2e2", border: "none", padding: "5px 8px", borderRadius: "6px", cursor: "pointer" }} title="حذف">🗑️</button></div>) }
+    { name: "عملیات", width: "100px", center: true, cell: (row) => (<div className="stack-on-mobile" style={{ display: "flex", gap: "6px", justifyContent: "center" }}><button className="table-action-btn" onClick={() => handleEditClick(row)} style={{ background: "#e0e7ff", border: "none", padding: "5px 8px", borderRadius: "6px", cursor: "pointer" }} title="ویرایش">✏️</button><button className="table-action-btn" onClick={() => handleDeleteClick(row)} style={{ background: "#fee2e2", border: "none", padding: "5px 8px", borderRadius: "6px", cursor: "pointer" }} title="حذف">🗑️</button></div>) }
   ];
 
   const customStyles = {
@@ -439,7 +439,7 @@ const IncomeList = ({ user, onBack }) => {
       </div>
 
       {/* آمار - 3 کارت */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px", marginBottom: "30px" }}>
+      <div className="responsive-grid-3" style={{ marginBottom: "30px" }}>
         <div style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "20px", borderRadius: "20px", color: "#fff", textAlign: "center" }}>
           <span style={{ fontSize: "32px" }}>💰</span>
           <div style={{ fontSize: "14px", marginTop: "8px", opacity: 0.9 }}>مجموع واریزی‌ها</div>
@@ -550,7 +550,7 @@ const IncomeList = ({ user, onBack }) => {
         </div>
 
         {/* دکمه‌های پرینت */}
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        <div className="print-btn-desktop-only" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           <button 
             onClick={() => handlePrint("all")} 
             style={{ 

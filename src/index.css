@@ -126,3 +126,190 @@ code {
 * {
   font-family: 'IRANSansWeb', sans-serif !important;
 }
+
+/* ===== باکس مدل استاندارد برای همه، جلوگیری از سرریز افقی ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* ===== کلاس‌های کمکی ریسپانسیو - برای استفاده به‌جای grid های inline ===== */
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.responsive-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .responsive-grid-2,
+  .responsive-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  /* گرید ۴ ستونه روی موبایل ۲ ستونه می‌شه (برای کارت‌های کوچیک مثل ماه‌ها بهتره) */
+  .responsive-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .responsive-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* جدول‌ها روی موبایل به‌جای بهم‌ریختگی، اسکرول افقی می‌گیرند */
+.responsive-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* روی موبایل، ردیف‌های دوستونه‌ی فرم (مثل فرم ثبت خودرو) تک‌ستونه بشن */
+.form-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+  }
+}
+
+/* رفع باگ 100vh سافاری موبایل: از dvh (که ارتفاع واقعی قابل‌مشاهده رو در نظر می‌گیره) استفاده می‌کنیم */
+.app-shell-height {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.app-sidebar-full-height {
+  height: 100vh;
+  height: 100dvh;
+}
+.app-content-min-height {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+@media (max-width: 768px) {
+  .app-modal-box {
+    max-width: 96% !important;
+    max-height: 92vh !important;
+  }
+  .app-modal-header h3 {
+    font-size: 15px !important;
+  }
+  .app-modal-content {
+    padding: 14px !important;
+  }
+}
+
+/* دکمه‌های ویرایش/حذف تو جدول‌ها و کارت‌ها - روی موبایل اندازه استاندارد و لمس‌پذیر */
+@media (max-width: 768px) {
+  .table-action-btn {
+    min-width: 34px !important;
+    min-height: 34px !important;
+    padding: 6px 10px !important;
+    font-size: 14px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* روی موبایل، دکمه‌های ویرایش/حذف داخل جدول‌ها هر کدوم تو یه سطر جدا باشن */
+@media (max-width: 768px) {
+  .stack-on-mobile .table-action-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  button, input, select, textarea {
+    font-size: 14px !important;
+  }
+}
+
+/* تیتر اصلی هر صفحه (بالای صفحه) رو موبایل کوچیک‌تر بشه */
+@media (max-width: 768px) {
+  h2 {
+    font-size: 17px !important;
+  }
+}
+@media (max-width: 768px) {
+  .card-title-mobile {
+    font-size: 14px !important;
+  }
+}
+
+/* ردیف دکمه‌ها (مثل فروش/ثبت هزینه/ویرایش) روی موبایل زیر هم قرار بگیرن */
+.stack-on-mobile {
+  display: flex;
+}
+@media (max-width: 768px) {
+  .stack-on-mobile {
+    flex-direction: column;
+  }
+}
+
+/* لیبل و اینپوت‌ها روی موبایل کوچیک‌تر بشن */
+@media (max-width: 768px) {
+  .app-modal-content label {
+    font-size: 11px !important;
+  }
+  .app-modal-content input,
+  .app-modal-content select,
+  .app-modal-content textarea {
+    font-size: 13px !important;
+    padding: 7px 9px !important;
+  }
+}
+/* هدر داشبورد (نام کاربری و دکمه خروج) روی موبایل جمع‌وجورتر بشه */
+@media (max-width: 768px) {
+  .dash-header {
+    padding: 10px 12px !important;
+    gap: 8px;
+  }
+  .dash-user-info {
+    padding: 5px 10px !important;
+    gap: 6px !important;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  .dash-username {
+    font-size: 11px !important;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .dash-logout-btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    gap: 4px !important;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .print-btn-desktop-only {
+    display: none !important;
+  }
+}

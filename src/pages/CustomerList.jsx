@@ -377,8 +377,9 @@ const CustomerList = ({ user, onBack }) => {
       width: "100px",
       center: true,
       cell: (row) => (
-        <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+        <div className="stack-on-mobile" style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
           <button
+            className="table-action-btn"
             onClick={() => handleEditClick(row)}
             style={{
               background: "#e0e7ff",
@@ -393,6 +394,7 @@ const CustomerList = ({ user, onBack }) => {
             ✏️
           </button>
           <button
+            className="table-action-btn"
             onClick={() => handleDeleteClick(row)}
             style={{
               background: "#fee2e2",
@@ -502,7 +504,7 @@ const CustomerList = ({ user, onBack }) => {
           <button onClick={() => setShowAddModal(true)} style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
             ➕ ثبت مشتری جدید
           </button>
-          <button onClick={handlePrint} style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
+          <button className="print-btn-desktop-only" onClick={handlePrint} style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
             🖨️ پرینت
           </button>
         </div>

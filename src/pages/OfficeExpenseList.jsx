@@ -374,8 +374,9 @@ const OfficeExpenseList = ({ user, onBack }) => {
       width: "100px",
       center: true,
       cell: (row) => (
-        <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+        <div className="stack-on-mobile" style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
           <button
+            className="table-action-btn"
             onClick={() => handleEditClick(row)}
             style={{
               background: "#e0e7ff",
@@ -390,6 +391,7 @@ const OfficeExpenseList = ({ user, onBack }) => {
             ✏️
           </button>
           <button
+            className="table-action-btn"
             onClick={() => handleDeleteClick(row)}
             style={{
               background: "#fee2e2",
@@ -499,14 +501,14 @@ const OfficeExpenseList = ({ user, onBack }) => {
           <button onClick={() => setShowAddModal(true)} style={{ background: "#16a34a", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
             ➕ ثبت هزینه جدید
           </button>
-          <button onClick={handlePrint} style={{ background: "#f59e0b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
+          <button className="print-btn-desktop-only" onClick={handlePrint} style={{ background: "#f59e0b", color: "#fff", border: "none", padding: "8px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
             🖨️ پرینت
           </button>
         </div>
       </div>
 
       {/* آمار */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", marginBottom: "24px" }}>
+      <div className="responsive-grid-2" style={{ marginBottom: "24px" }}>
         <div style={{ background: "linear-gradient(135deg, #64748b, #475569)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" }}>
           <span style={{ fontSize: "32px" }}>📋</span>
           <div>

@@ -394,8 +394,9 @@ const BackupManager = ({ user, onBack }) => {
       width: "150px",
       center: true,
       cell: (row) => (
-        <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+        <div className="stack-on-mobile" style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
           <button
+            className="table-action-btn"
             onClick={() => {
               setBackupToRestore(row);
               setShowRestoreModal(true);
@@ -415,6 +416,7 @@ const BackupManager = ({ user, onBack }) => {
             ↩️ بازیابی
           </button>
           <button
+            className="table-action-btn"
             onClick={() => handleDeleteClick(row)}
             style={{
               background: "#fee2e2",
@@ -559,7 +561,7 @@ const BackupManager = ({ user, onBack }) => {
       </div>
 
       {/* آمار */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", marginBottom: "24px", maxWidth: "400px" }}>
+      <div className="responsive-grid-2" style={{ marginBottom: "24px", maxWidth: "400px" }}>
         <div style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px" }}>
           <span style={{ fontSize: "32px" }}>💾</span>
           <div>

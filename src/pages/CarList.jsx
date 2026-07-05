@@ -428,7 +428,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", marginBottom: "24px" }}>
+      <div className="responsive-grid-2" style={{ marginBottom: "24px" }}>
         <div style={{ background: "linear-gradient(135deg, #64748b, #475569)", padding: "16px 20px", borderRadius: "16px", color: "#fff", display: "flex", alignItems: "center", gap: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
           <span style={{ fontSize: "32px" }}>🚗</span>
           <div>
@@ -471,7 +471,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
           </button>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px" }}>
+        <div className="responsive-grid-2">
           {filteredCars.map((car) => {
             // ===== استفاده از تابع جدید برای هزینه‌های هر خودرو =====
             const totalExpense = getCarExpenses(car.id, Object.values(expenses || {}));
@@ -496,7 +496,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                   justifyContent: "space-between",
                   alignItems: "center"
                 }}>
-                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "bold", color: "#fff" }}>🚗 {car.carName}</h3>
+                  <h3 className="card-title-mobile" style={{ margin: 0, fontSize: "16px", fontWeight: "bold", color: "#fff" }}>🚗 {car.carName}</h3>
                   <span style={{
                     background: "rgba(255,255,255,0.2)",
                     padding: "4px 12px",
@@ -528,7 +528,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
 
                   <div style={{ marginBottom: "16px", padding: "12px", background: "#deedd4", borderRadius: "14px", borderRight: "2px solid #deedd4" }}>
                     <h4 style={{ fontSize: "13px", fontWeight: "bold", color: "#166534", marginBottom: "10px", paddingBottom: "6px", borderBottom: "1px solid #bbf7d0" }}>🚘 مشخصات خودرو</h4>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                    <div className="responsive-grid-2" style={{ gap: "8px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", padding: "6px", background: "#fff", borderRadius: "8px" }}>
                         <span style={{ color: "#64748b" }}>سال تولید:</span>
                         <span style={{ fontWeight: "500", color: "#1e293b" }}>{car.productionYear || "-"}</span>
@@ -542,7 +542,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
 
                   <div style={{ marginBottom: "16px", padding: "12px", background: "#fef3c7", borderRadius: "14px" }}>
                     <h4 style={{ fontSize: "13px", fontWeight: "bold", color: "#92400e", marginBottom: "10px", paddingBottom: "6px", borderBottom: "1px solid #fde68a" }}>📅 تاریخ‌های مهم</h4>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", textAlign: "center" }}>
+                    <div className="responsive-grid-3" style={{ gap: "8px", textAlign: "center" }}>
                       <div style={{ background: "#fff", padding: "6px", borderRadius: "10px" }}>
                         <div style={{ fontSize: "9px", color: "#f59e0b", marginBottom: "3px" }}>🛡️ بیمه</div>
                         <div style={{ fontSize: "11px", fontWeight: "500" }}>{safeConvertToPersianDate(car.insuranceExpiry) || "-"}</div>
@@ -565,10 +565,10 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                         {carExpenses.slice(0, 3).map((exp) => {
                           const catInfo = expenseCategories.find(c => c.value === exp.category) || { icon: "📦", label: "سایر", color: "#64748b" };
                           return (
-                            <div key={exp.id} style={{ background: "#fff", padding: "8px 12px", borderRadius: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRight: `3px solid ${catInfo.color}` }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div key={exp.id} style={{ background: "#fff", padding: "8px 12px", borderRadius: "10px", borderRight: `3px solid ${catInfo.color}` }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
                                 <span style={{ fontSize: "16px" }}>{catInfo.icon}</span>
-                                <div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                   <span style={{ fontSize: "12px", fontWeight: "500" }}>{catInfo.label}</span>
                                   {exp.description && (
                                     <div style={{ fontSize: "10px", color: "#64748b", marginTop: "2px" }}>
@@ -577,13 +577,15 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                                   )}
                                 </div>
                               </div>
-                              <div style={{ textAlign: "left" }}>
-                                <div style={{ fontWeight: "bold", fontSize: "13px", color: "#ef4444" }}>{formatPrice(exp.amount)} تومان</div>
-                                <div style={{ fontSize: "9px", color: "#94a3b8" }}>{numberToWords(exp.amount)}</div>
-                              </div>
-                              <div style={{ display: "flex", gap: "6px" }}>
-                                <button onClick={() => handleEditExpense(exp)} style={{ background: "#e0e7ff", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "11px" }}>✏️</button>
-                                <button onClick={() => handleDeleteExpenseClick(exp)} style={{ background: "#fee2e2", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "11px" }}>🗑️</button>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                  <div style={{ fontWeight: "bold", fontSize: "13px", color: "#ef4444" }}>{formatPrice(exp.amount)} تومان</div>
+                                  <div style={{ fontSize: "9px", color: "#94a3b8" }}>{numberToWords(exp.amount)}</div>
+                                </div>
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                  <button className="table-action-btn" onClick={() => handleEditExpense(exp)} style={{ background: "#e0e7ff", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "11px" }}>✏️</button>
+                                  <button className="table-action-btn" onClick={() => handleDeleteExpenseClick(exp)} style={{ background: "#fee2e2", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "11px" }}>🗑️</button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -597,7 +599,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                     </div>
                   )}
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
+                  <div className="responsive-grid-3" style={{ gap: "10px", marginBottom: "16px" }}>
                     <div style={{ background: "#e0f1ee", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
                       <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "4px" }}>💰 مبلغ خرید</div>
                       <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b" }}>{formatPrice(car.price)}</div>
@@ -615,7 +617,7 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <div className="stack-on-mobile" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                     <button onClick={() => {
                       setSelectedCarForSale(car);
                       setSellModalOpen(true);
@@ -729,28 +731,28 @@ const CarList = ({ user, onBack, onAddCar, onEditCar, onSellCar }) => {
                 const catInfo = expenseCategories.find(c => c.value === exp.category) || { icon: "📦", label: "سایر", color: "#64748b" };
                 return (
                   <div key={exp.id} style={{ background: "#f8fafc", borderRadius: "12px", padding: "12px", borderRight: `3px solid ${catInfo.color}` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "20px" }}>{catInfo.icon}</span>
-                        <div>
-                          <div style={{ fontWeight: "bold", fontSize: "13px" }}>{catInfo.label}</div>
-                          {exp.description && (
-                            <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
-                              📝 {exp.description}
-                            </div>
-                          )}
-                        </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "20px" }}>{catInfo.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: "bold", fontSize: "13px" }}>{catInfo.label}</div>
+                        {exp.description && (
+                          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                            📝 {exp.description}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ textAlign: "left" }}>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
                         <div style={{ fontWeight: "bold", fontSize: "14px", color: "#ef4444" }}>{formatPrice(exp.amount)} تومان</div>
                         <div style={{ fontSize: "10px", color: "#94a3b8" }}>{numberToWords(exp.amount)}</div>
                       </div>
                       <div style={{ display: "flex", gap: "6px" }}>
-                        <button onClick={() => {
+                        <button className="table-action-btn" onClick={() => {
                           setOpenAllExpensesModal(false);
                           handleEditExpense(exp);
                         }} style={{ background: "#e0e7ff", border: "none", padding: "5px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}>✏️</button>
-                        <button onClick={() => {
+                        <button className="table-action-btn" onClick={() => {
                           setOpenAllExpensesModal(false);
                           handleDeleteExpenseClick(exp);
                         }} style={{ background: "#fee2e2", border: "none", padding: "5px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}>🗑️</button>

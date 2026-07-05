@@ -164,7 +164,7 @@ const handleSubmit = async () => {
     fontWeight: "500"
   };
 
-  const rowStyle = { display: "flex", gap: "15px", marginBottom: "5px" };
+  const rowStyle = { gap: "15px", marginBottom: "5px" };
   const containerStyle = { display: "flex", flexDirection: "column", height: "100%" };
   const scrollableAreaStyle = { flex: 1, overflowY: "auto", paddingRight: "5px" };
   const buttonContainerStyle = { display: "flex", gap: "10px", marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #e2e8f0" };
@@ -197,7 +197,7 @@ const handleSubmit = async () => {
       )}
 
       <div style={scrollableAreaStyle}>
-        <div style={rowStyle}>
+        <div className="form-row" style={rowStyle}>
           <div style={{ width: "100%" }}>
             <label style={labelStyle}>نام خودرو {!isEditing && "*"}</label>
             <input type="text" value={carName} onChange={(e) => setCarName(e.target.value)} style={inputStyle(0)} onFocus={() => setFocusedIndex(0)} onBlur={() => setFocusedIndex(null)} placeholder="مثال: پراید 131" disabled={loading} />
@@ -208,7 +208,7 @@ const handleSubmit = async () => {
           </div>
         </div>
 
-        <div style={rowStyle}>
+        <div className="form-row" style={rowStyle}>
           <div style={{ width: "100%" }}>
             <label style={labelStyle}>قیمت (تومان) {!isEditing && "*"}</label>
             <input type="text" value={price ? price.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""} onChange={handlePriceChange} style={priceInputStyle(2)} onFocus={() => setFocusedIndex(2)} onBlur={() => setFocusedIndex(null)} dir="ltr" placeholder="مثال: 250000000" disabled={loading} />
@@ -220,7 +220,7 @@ const handleSubmit = async () => {
           </div>
         </div>
 
-        <div style={rowStyle}>
+        <div className="form-row" style={rowStyle}>
           <div style={{ width: "100%" }}>
             <label style={labelStyle}>رنگ خودرو</label>
             <input type="text" value={color} onChange={(e) => setColor(e.target.value)} style={inputStyle(4)} onFocus={() => setFocusedIndex(4)} onBlur={() => setFocusedIndex(null)} placeholder="مثال: مشکی - سفید - نقره‌ای" disabled={loading} />
@@ -231,7 +231,7 @@ const handleSubmit = async () => {
           </div>
         </div>
 
-        <div style={rowStyle}>
+        <div className="form-row" style={rowStyle}>
           <div style={{ width: "100%" }}>
             <label style={labelStyle}>تاریخ انقضای بیمه (مثال: 1403/01/15)</label>
             <input type="text" value={insuranceExpiry} onChange={(e) => setInsuranceExpiry(e.target.value)} style={inputStyle(6)} onFocus={() => setFocusedIndex(6)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />
@@ -242,7 +242,7 @@ const handleSubmit = async () => {
           </div>
         </div>
 
-        <div style={rowStyle}>
+        <div className="form-row" style={rowStyle}>
           <div style={{ width: "100%" }}>
             <label style={labelStyle}>تاریخ معاینه فنی (مثال: 1403/01/15)</label>
             <input type="text" value={technicalInspectionDate} onChange={(e) => setTechnicalInspectionDate(e.target.value)} style={inputStyle(8)} onFocus={() => setFocusedIndex(8)} onBlur={() => setFocusedIndex(null)} placeholder="1403/01/15" disabled={loading} />

@@ -102,7 +102,7 @@ const CustomerForm = ({ user, onSaved, onCancel }) => {
     fontWeight: "500"
   };
 
-  const rowStyle = { display: "flex", gap: "15px", marginBottom: "5px" };
+  const rowStyle = { gap: "15px", marginBottom: "5px" };
   const containerStyle = { display: "flex", flexDirection: "column", height: "100%" };
   const scrollableAreaStyle = { flex: 1, overflowY: "auto", paddingRight: "5px" };
   const buttonContainerStyle = { display: "flex", gap: "10px", marginTop: "20px", paddingTop: "15px", borderTop: "1px solid #e2e8f0" };
@@ -124,7 +124,7 @@ const CustomerForm = ({ user, onSaved, onCancel }) => {
       )}
 
       <div style={scrollableAreaStyle}>
-        <div style={rowStyle}>
+        <div className="form-row" style={rowStyle}>
           <div style={{ width: "100%" }}>
             <label style={labelStyle}>👤 نام مشتری</label>
             <input 

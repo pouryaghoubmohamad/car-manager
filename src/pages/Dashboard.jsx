@@ -197,12 +197,12 @@ const Dashboard = ({ user }) => {
 
   return (
     <div>
-      <div style={headerStyle}>
-        <div style={userInfoStyle}>
+      <div className="dash-header" style={headerStyle}>
+        <div className="dash-user-info" style={userInfoStyle}>
           <span style={userIconStyle}>👤</span>
-          <span style={userNameStyle}>{user?.email}</span>
+          <span className="dash-username" style={userNameStyle}>{user?.email}</span>
         </div>
-        <button onClick={handleLogout} style={logoutBtnStyle}>
+        <button className="dash-logout-btn" onClick={handleLogout} style={logoutBtnStyle}>
           🚪 خروج
         </button>
       </div>
@@ -210,7 +210,7 @@ const Dashboard = ({ user }) => {
       <h2 style={pageTitleStyle}>📊 داشبورد مدیریت</h2>
       <p style={pageSubtitleStyle}>خلاصه اطلاعات و آمار کلی سیستم</p>
 
-      <div style={statsContainerStyle}>
+      <div className="responsive-grid-4" style={statsContainerStyle}>
         <div style={statCardStyle("linear-gradient(135deg, #3b82f6, #2563eb)")}>
           <div style={statIconStyle}>🚗</div>
           <div style={statLabelStyle}>مجموع خرید ماشین</div>
@@ -263,8 +263,6 @@ const Dashboard = ({ user }) => {
 
 // ========== استایل‌ها ==========
 const statsContainerStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(4, 1fr)",
   gap: "20px",
   marginBottom: "30px"
 };

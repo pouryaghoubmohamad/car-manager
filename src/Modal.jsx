@@ -79,16 +79,16 @@ const Modal = ({
       </style>
       
       <div style={{...overlayStyle, zIndex: zIndex}} onClick={handleOverlayClick}>
-        <div style={{...modalBoxStyle, width: getModalWidth(), ...getAnimationStyle()}} onClick={(e) => e.stopPropagation()}>
+        <div className="app-modal-box" style={{...modalBoxStyle, width: getModalWidth(), ...getAnimationStyle()}} onClick={(e) => e.stopPropagation()}>
           
-          <div style={{...headerStyle, backgroundColor: color }}>
+          <div className="app-modal-header" style={{...headerStyle, backgroundColor: color }}>
             <h3 style={headerTitleStyle}>{title}</h3>
             {showCloseButton && (
               <button onClick={onClose} style={closeBtnStyle}>✕</button>
             )}
           </div>
 
-          <div style={modalContentStyle}>
+          <div className="app-modal-content" style={modalContentStyle}>
             {children}
           </div>
 

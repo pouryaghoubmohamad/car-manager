@@ -692,7 +692,7 @@ const confirmRestore = async () => {
       </div>
 
       {/* ===== ۴ باکس آماری ===== */}
-      <div style={statsContainerStyle}>
+      <div className="responsive-grid-4" style={statsContainerStyle}>
         {/* 1. خودروهای فروخته شده */}
         <div style={statCardStyle}>
           <span style={statIconStyle}>🚗</span>
@@ -755,7 +755,7 @@ const confirmRestore = async () => {
           <p>هیچ خودروی فروخته شده‌ای وجود ندارد</p>
         </div>
       ) : (
-        <div style={carsGridStyle}>
+        <div className="responsive-grid-2" style={carsGridStyle}>
           {filteredCars.map((car, index) => {
             const purchasePrice = Number(car.purchasePrice) || Number(car.originalCar?.purchasePrice) || 0;
             const totalExpenses = car.totalExpense || (car.expenses ? Object.values(car.expenses).reduce((sum, exp) => sum + (exp.amount || 0), 0) : 0);
@@ -768,7 +768,7 @@ const confirmRestore = async () => {
             return (
               <div key={car.id} style={archiveCardStyle}>
                 <div style={{...archiveHeaderStyle, background: cardColor.header}}>
-                  <h3 style={archiveTitleStyle}>🚗 {carInfo.carName || "-"}</h3>
+                  <h3 className="card-title-mobile" style={archiveTitleStyle}>🚗 {carInfo.carName || "-"}</h3>
                   <span style={archiveBadgeStyle}>فروخته شده</span>
                 </div>
 
@@ -799,7 +799,7 @@ const confirmRestore = async () => {
 
                   <div style={carSpecsStyle}>
                     <h4 style={specsTitleStyle}>🚘 مشخصات خودرو</h4>
-                    <div style={specsGridStyle}>
+                    <div className="responsive-grid-2" style={specsGridStyle}>
                       <div style={specsItemStyle}>
                         <span style={specsLabelStyle}>📅 سال تولید:</span>
                         <span style={specsValueStyle}>{carInfo.productionYear || "-"}</span>
@@ -838,7 +838,7 @@ const confirmRestore = async () => {
                     </div>
                   )}
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
+                  <div className="responsive-grid-3" style={{ gap: "10px", marginBottom: "16px" }}>
                     <div style={{ background: "#f1f5f9", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
                       <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "4px" }}>💰 مبلغ خرید</div>
                       <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b" }}>{formatPrice(purchasePrice)}</div>
@@ -856,7 +856,7 @@ const confirmRestore = async () => {
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
+                  <div className="responsive-grid-2" style={{ gap: "10px", marginBottom: "16px" }}>
                     <div style={{ background: "#dcfce7", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
                       <div style={{ fontSize: "10px", color: "#16a34a", marginBottom: "4px" }}>💵 قیمت فروش</div>
                       <div style={{ fontSize: "14px", fontWeight: "bold", color: "#16a34a" }}>{formatPrice(car.sellingPrice)}</div>
@@ -870,7 +870,7 @@ const confirmRestore = async () => {
                   </div>
 
                   <div style={buttonContainerStyle}>
-                    <button onClick={() => handlePrint(car)} style={printBtnStyle}>
+                    <button className="print-btn-desktop-only" onClick={() => handlePrint(car)} style={printBtnStyle}>
                       🖨️ چاپ صورتحساب
                     </button>
                     <button onClick={() => openRestoreModal(car)} style={restoreBtnStyle}>
@@ -917,11 +917,9 @@ const pageTitleWrapper = { flex: 1, textAlign: "center" };
 const pageTitleTextStyle = { fontSize: "20px", fontWeight: "bold", color: "#1e293b", margin: 0 };
 
 // ===== ۴ ستونه =====
-const statsContainerStyle = { 
-  display: "grid", 
-  gridTemplateColumns: "repeat(4, 1fr)", 
-  gap: "16px", 
-  marginBottom: "24px" 
+const statsContainerStyle = {
+  gap: "16px",
+  marginBottom: "24px"
 };
 
 // ===== استایل‌های ۴ باکس =====
@@ -935,7 +933,7 @@ const statValueStyle = { fontSize: "24px", fontWeight: "bold" };
 const statLabelStyle = { fontSize: "12px", opacity: 0.9 };
 const statWordsSmall = { fontSize: "10px", opacity: 0.8, marginTop: "5px" };
 
-const carsGridStyle = { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px", alignItems: "start" };
+const carsGridStyle = { gap: "20px", alignItems: "start" };
 const archiveCardStyle = { background: "#fff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", transition: "all 0.3s" };
 const archiveHeaderStyle = { padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" };
 const archiveTitleStyle = { margin: 0, fontSize: "16px", fontWeight: "bold", color: "#fff" };
@@ -948,7 +946,7 @@ const infoRowStyle = { display: "flex", justifyContent: "space-between", marginB
 
 const carSpecsStyle = { marginBottom: "16px", padding: "12px", background: "#f0fdf4", borderRadius: "14px", borderRight: "2px solid #86efac" };
 const specsTitleStyle = { fontSize: "13px", fontWeight: "bold", color: "#166534", marginBottom: "10px", paddingBottom: "6px", borderBottom: "1px solid #bbf7d0", display: "flex", alignItems: "center", gap: "8px" };
-const specsGridStyle = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "8px" };
+const specsGridStyle = { gap: "10px", marginBottom: "8px" };
 const specsItemStyle = { display: "flex", justifyContent: "space-between", fontSize: "12px", padding: "6px 0", flexWrap: "wrap", gap: "6px" };
 const specsLabelStyle = { color: "#64748b", fontWeight: "500" };
 const specsValueStyle = { fontWeight: "600", color: "#1e293b" };

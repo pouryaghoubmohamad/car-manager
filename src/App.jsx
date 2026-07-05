@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import useIsMobile from "./hooks/useIsMobile";
 import Dashboard from "./pages/Dashboard";
 import CarList from "./pages/CarList";
 import AddCar from "./pages/CarForm";
@@ -24,8 +25,20 @@ function App() {
   const [selectedCarForSale, setSelectedCarForSale] = useState(null);
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [offlineCount, setOfflineCount] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = useIsMobile(768);
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [toast, setToast] = useState(null);
+
+  // در موبایل، منو به‌صورت پیش‌فرض بسته باشه؛ در دسکتاپ باز باشه
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
+
+  // بعد از انتخاب یک صفحه در موبایل، منو خودکار بسته بشه
+  const goToPage = (page) => {
+    setCurrentPage(page);
+    if (isMobile) setSidebarOpen(false);
+  };
 
   const showToast = (message, type) => {
     setToast({ message, type });
@@ -60,15 +73,48 @@ function App() {
     }
   };
 
-  const sidebarWidth = sidebarOpen ? "180px" : "45px";
+  // در دسکتاپ: عرض متغیر (باز/جمع) که کل صفحه رو هل می‌ده
+  // در موبایل: عرض ثابت که به‌صورت کشو (drawer) روی محتوا می‌شینه
+  const sidebarWidth = isMobile ? "220px" : (sidebarOpen ? "180px" : "45px");
 
   return (
-    <div style={appContainer}>
+    <div className="app-shell-height" style={appContainer}>
+      {/* نوار بالای موبایل با دکمه همبرگر */}
+      {isMobile && (
+        <div style={mobileTopBar}>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={mobileHamburgerBtn}>
+            ☰
+          </button>
+          <h2 style={mobileTopBarTitle}>🚗 مدیریت خودرو</h2>
+        </div>
+      )}
+
+      {/* پس‌زمینه تیره پشت منو در حالت موبایل */}
+      {isMobile && sidebarOpen && (
+        <div style={backdropStyle} onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* نوار کناری (منو) - سمت راست */}
-      <div style={{...sidebarStyle, width: sidebarWidth, right: 0, left: "auto"}}>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} style={hamburgerBtn}>
-          {sidebarOpen ? "◀" : "▶"}
-        </button>
+      <div
+        className="app-sidebar-full-height"
+        style={{
+          ...sidebarStyle,
+          width: sidebarWidth,
+          right: 0,
+          left: "auto",
+          ...(isMobile
+            ? {
+                transform: sidebarOpen ? "translateX(0)" : "translateX(100%)",
+                boxShadow: sidebarOpen ? "-4px 0 20px rgba(0,0,0,0.3)" : "none",
+              }
+            : {}),
+        }}
+      >
+        {!isMobile && (
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={hamburgerBtn}>
+            {sidebarOpen ? "◀" : "▶"}
+          </button>
+        )}
 
         <div style={sidebarHeader}>
           {sidebarOpen ? (
@@ -82,7 +128,7 @@ function App() {
         
         <div style={sidebarMenu}>
           <button
-            onClick={() => setCurrentPage("dashboard")}
+            onClick={() => goToPage("dashboard")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "dashboard" ? "#f59e0b" : "transparent",
@@ -96,7 +142,7 @@ function App() {
           </button>
           
           <button
-            onClick={() => setCurrentPage("carList")}
+            onClick={() => goToPage("carList")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "carList" ? "#f59e0b" : "transparent",
@@ -110,7 +156,7 @@ function App() {
           </button>
           
           <button
-            onClick={() => setCurrentPage("archived")}
+            onClick={() => goToPage("archived")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "archived" ? "#f59e0b" : "transparent",
@@ -124,7 +170,7 @@ function App() {
           </button>
           
           <button
-            onClick={() => setCurrentPage("officeExpenses")}
+            onClick={() => goToPage("officeExpenses")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "officeExpenses" ? "#f59e0b" : "transparent",
@@ -138,7 +184,7 @@ function App() {
           </button>
           
           <button
-            onClick={() => setCurrentPage("incomes")}
+            onClick={() => goToPage("incomes")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "incomes" ? "#f59e0b" : "transparent",
@@ -152,7 +198,7 @@ function App() {
           </button>
           
           <button
-            onClick={() => setCurrentPage("dealerships")}
+            onClick={() => goToPage("dealerships")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "dealerships" ? "#f59e0b" : "transparent",
@@ -166,7 +212,7 @@ function App() {
           </button>
 
           <button
-            onClick={() => setCurrentPage("customers")}
+            onClick={() => goToPage("customers")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "customers" ? "#f59e0b" : "transparent",
@@ -180,7 +226,7 @@ function App() {
           </button>
 
           <button
-            onClick={() => setCurrentPage("profit")}
+            onClick={() => goToPage("profit")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "profit" ? "#f59e0b" : "transparent",
@@ -194,7 +240,7 @@ function App() {
           </button>
 
           <button
-            onClick={() => setCurrentPage("backup")}
+            onClick={() => goToPage("backup")}
             style={{
               ...menuBtnStyle,
               backgroundColor: currentPage === "backup" ? "#f59e0b" : "transparent",
@@ -227,7 +273,15 @@ function App() {
       </div>
 
       {/* محتوای اصلی */}
-      <div style={{...contentStyle, marginRight: sidebarWidth, marginLeft: 0}}>
+      <div
+        className="app-content-min-height"
+        style={{
+          ...contentStyle,
+          marginRight: isMobile ? 0 : sidebarWidth,
+          marginLeft: 0,
+          marginTop: isMobile ? "48px" : 0,
+        }}
+      >
         {currentPage === "dashboard" && (
           <Dashboard user={user} />
         )}
@@ -320,7 +374,6 @@ function App() {
 // ===== استایل‌ها =====
 const appContainer = {
   display: "flex",
-  minHeight: "100vh",
   backgroundColor: "#f1f5f9",
   position: "relative"
 };
@@ -351,13 +404,56 @@ const sidebarStyle = {
   display: "flex",
   flexDirection: "column",
   position: "fixed",
-  height: "100vh",
   overflow: "hidden",
-  zIndex: 100,
+  zIndex: 200,
   justifyContent: "flex-start",
-  transition: "width 0.3s ease",
+  transition: "width 0.3s ease, transform 0.3s ease",
   top: 0,
   boxShadow: "-2px 0 10px rgba(0,0,0,0.1)"
+};
+
+const mobileTopBar = {
+  position: "fixed",
+  top: 0,
+  right: 0,
+  left: 0,
+  height: "48px",
+  backgroundColor: "#1e293b",
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  padding: "0 12px",
+  zIndex: 150,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
+};
+
+const mobileHamburgerBtn = {
+  background: "#f59e0b",
+  border: "none",
+  width: "34px",
+  height: "34px",
+  borderRadius: "8px",
+  fontSize: "16px",
+  cursor: "pointer",
+  color: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0
+};
+
+const mobileTopBarTitle = {
+  margin: 0,
+  fontSize: "14px",
+  fontWeight: "bold",
+  color: "#fff"
+};
+
+const backdropStyle = {
+  position: "fixed",
+  inset: 0,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  zIndex: 190
 };
 
 const sidebarHeader = {
@@ -442,7 +538,6 @@ const contentStyle = {
   flex: 1,
   padding: "16px",
   overflowY: "auto",
-  minHeight: "100vh",
   transition: "margin-right 0.3s ease"
 };
 

@@ -1876,7 +1876,7 @@ const handleMonthlyExport = (year, monthIndex) => {
     { name: "دسته‌بندی", selector: (row) => row.categoryLabel, sortable: true, width: "120px", cell: (row) => { const cat = profitCategories.find(c => c.value === row.category); return (<span style={{ background: cat?.bg, padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "500", color: cat?.color, display: "inline-flex", alignItems: "center", gap: "6px" }}><span>{cat?.icon}</span><span>{cat?.label}</span></span>); } },
     { name: "مبلغ (تومان)", selector: (row) => row.amount, sortable: true, width: "200px", cell: (row) => (<div><span style={{ background: "#dcfce7", padding: "4px 10px", borderRadius: "16px", fontSize: "12px", fontWeight: "bold", color: "#16a34a", display: "inline-block", whiteSpace: "nowrap" }}>{formatPrice(row.amount)} تومان</span><div style={{ fontSize: "10px", color: "#64748b", marginTop: "4px" }}>{numberToWords(row.amount)} تومان</div></div>) },
     { name: "تاریخ", selector: (row) => getDisplayDate(row), sortable: true, width: "110px", cell: (row) => (<span style={{ background: "#dbeafe", padding: "4px 10px", borderRadius: "16px", fontSize: "12px", color: "#1e40af", display: "inline-block", whiteSpace: "nowrap" }}>{getDisplayDate(row)}</span>) },
-    { name: "عملیات", width: "100px", center: true, cell: (row) => (<div style={{ display: "flex", gap: "6px", justifyContent: "center" }}><button onClick={() => handleEditClick(row)} style={{ background: "#e0e7ff", border: "none", padding: "5px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "13px" }} title="ویرایش">✏️</button><button onClick={() => handleDeleteClick(row)} style={{ background: "#fee2e2", border: "none", padding: "5px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "13px" }} title="حذف">🗑️</button></div>) }
+    { name: "عملیات", width: "100px", center: true, cell: (row) => (<div className="stack-on-mobile" style={{ display: "flex", gap: "6px", justifyContent: "center" }}><button className="table-action-btn" onClick={() => handleEditClick(row)} style={{ background: "#e0e7ff", border: "none", padding: "5px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "13px" }} title="ویرایش">✏️</button><button className="table-action-btn" onClick={() => handleDeleteClick(row)} style={{ background: "#fee2e2", border: "none", padding: "5px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "13px" }} title="حذف">🗑️</button></div>) }
   ];
 
   const customStyles = {
@@ -1923,13 +1923,13 @@ const handleMonthlyExport = (year, monthIndex) => {
         <button onClick={onBack} style={{ background: "linear-gradient(135deg, #64748b, #475569)", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "12px", cursor: "pointer", fontSize: "13px", fontWeight: "500", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>← بازگشت</button>
         <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "900", color: "#0f172a", background: "linear-gradient(135deg, #f59e0b, #fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>📈 مدیریت سود و گزارش‌ها</h2>
         <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={handlePrint} style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "12px", cursor: "pointer", fontWeight: "600", boxShadow: "0 4px 12px rgba(139,92,246,0.3)" }}>🖨️ پرینت کامل</button>
+          <button className="print-btn-desktop-only" onClick={handlePrint} style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "12px", cursor: "pointer", fontWeight: "600", boxShadow: "0 4px 12px rgba(139,92,246,0.3)" }}>🖨️ پرینت کامل</button>
           <button onClick={() => setShowAddModal(true)} style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "12px", cursor: "pointer", fontWeight: "600", boxShadow: "0 4px 12px rgba(16,185,129,0.3)" }}>➕ ثبت سود جدید</button>
         </div>
       </div>
 
       {/* 3 کارت اصلی */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px", marginBottom: "30px" }}>
+      <div className="responsive-grid-3" style={{ marginBottom: "30px" }}>
         <div style={{ 
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
           borderRadius: "20px", 
@@ -1992,7 +1992,7 @@ const handleMonthlyExport = (year, monthIndex) => {
       </div>
 
       {/* دسته‌بندی سودها */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px", marginBottom: "30px" }}>
+      <div className="responsive-grid-3" style={{ marginBottom: "30px" }}>
         {profitCategories.map(cat => {
           const total = getCategoryTotal(cat.value);
           return (
@@ -2214,7 +2214,7 @@ const handleMonthlyExport = (year, monthIndex) => {
     <div style={{ fontSize: "13px", color: "#92400e", marginTop: "8px" }}>{numberToWords(selectedYearProfit)} تومان</div>
   </div>
   
-  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+  <div className="responsive-grid-4" style={{ gap: "16px" }}>
     {persianMonths.map((month, index) => {
       const amount = monthlyData[index + 1];
       const percent = maxMonthlyAmount > 0 ? (amount / maxMonthlyAmount) * 100 : 0;
